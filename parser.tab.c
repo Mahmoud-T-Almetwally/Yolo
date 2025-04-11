@@ -69,7 +69,7 @@
 /* First part of user prologue.  */
 #line 1 "parser.y"
 
-// MUST BE FIRST: Include headers needed in generated parser.tab.h
+
 #include "symtab.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -78,16 +78,18 @@
 
 int yylex(void);
 void yyerror(const char *s);
+extern int yylineno;
 
 typedef enum {
     OP_ADD,
     OP_SUB,
     OP_MUL,
     OP_DIV
+    
 } op_type;
 
 
-#line 91 "parser.tab.c"
+#line 93 "parser.tab.c"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -162,36 +164,39 @@ enum yysymbol_kind_t
   YYSYMBOL_MINUS = 44,                     /* MINUS  */
   YYSYMBOL_MULTIPLY = 45,                  /* MULTIPLY  */
   YYSYMBOL_DIVIDE = 46,                    /* DIVIDE  */
-  YYSYMBOL_INC = 47,                       /* INC  */
-  YYSYMBOL_DEC = 48,                       /* DEC  */
-  YYSYMBOL_NOT = 49,                       /* NOT  */
-  YYSYMBOL_POWER = 50,                     /* POWER  */
-  YYSYMBOL_UNARY_MINUS = 51,               /* UNARY_MINUS  */
-  YYSYMBOL_NEG = 52,                       /* NEG  */
-  YYSYMBOL_YYACCEPT = 53,                  /* $accept  */
-  YYSYMBOL_program = 54,                   /* program  */
-  YYSYMBOL_function = 55,                  /* function  */
-  YYSYMBOL_params = 56,                    /* params  */
+  YYSYMBOL_POWER = 47,                     /* POWER  */
+  YYSYMBOL_NOT = 48,                       /* NOT  */
+  YYSYMBOL_UNARY_MINUS = 49,               /* UNARY_MINUS  */
+  YYSYMBOL_INC = 50,                       /* INC  */
+  YYSYMBOL_DEC = 51,                       /* DEC  */
+  YYSYMBOL_YYACCEPT = 52,                  /* $accept  */
+  YYSYMBOL_program = 53,                   /* program  */
+  YYSYMBOL_function = 54,                  /* function  */
+  YYSYMBOL_params = 55,                    /* params  */
+  YYSYMBOL_param_list = 56,                /* param_list  */
   YYSYMBOL_param = 57,                     /* param  */
   YYSYMBOL_type = 58,                      /* type  */
-  YYSYMBOL_expression = 59,                /* expression  */
-  YYSYMBOL_statements = 60,                /* statements  */
-  YYSYMBOL_statement = 61,                 /* statement  */
-  YYSYMBOL_print_statement = 62            /* print_statement  */
+  YYSYMBOL_literal = 59,                   /* literal  */
+  YYSYMBOL_expression = 60,                /* expression  */
+  YYSYMBOL_statements = 61,                /* statements  */
+  YYSYMBOL_statement = 62,                 /* statement  */
+  YYSYMBOL_declaration_statement = 63,     /* declaration_statement  */
+  YYSYMBOL_print_statement = 64            /* print_statement  */
 };
 typedef enum yysymbol_kind_t yysymbol_kind_t;
 
 
 
 /* Unqualified %code blocks.  */
-#line 29 "parser.y"
+#line 31 "parser.y"
 
-    // Forward declaration for helper function
+    
     data_type token_type_to_data_type(int token_type);
     void handle_binop(symrec* left, symrec* right, symrec** result, int op);
     extern symrec *sym_table;
+    extern int yylineno; 
 
-#line 195 "parser.tab.c"
+#line 200 "parser.tab.c"
 
 #ifdef short
 # undef short
@@ -514,19 +519,19 @@ union yyalloc
 /* YYFINAL -- State number of the termination state.  */
 #define YYFINAL  3
 /* YYLAST -- Last index in YYTABLE.  */
-#define YYLAST   177
+#define YYLAST   167
 
 /* YYNTOKENS -- Number of terminals.  */
-#define YYNTOKENS  53
+#define YYNTOKENS  52
 /* YYNNTS -- Number of nonterminals.  */
-#define YYNNTS  10
+#define YYNNTS  13
 /* YYNRULES -- Number of rules.  */
-#define YYNRULES  38
+#define YYNRULES  42
 /* YYNSTATES -- Number of states.  */
-#define YYNSTATES  77
+#define YYNSTATES  84
 
 /* YYMAXUTOK -- Last valid token kind.  */
-#define YYMAXUTOK   307
+#define YYMAXUTOK   306
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
@@ -570,17 +575,18 @@ static const yytype_int8 yytranslate[] =
       15,    16,    17,    18,    19,    20,    21,    22,    23,    24,
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
-      45,    46,    47,    48,    49,    50,    51,    52
+      45,    46,    47,    48,    49,    50,    51
 };
 
 #if YYDEBUG
 /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
-static const yytype_uint8 yyrline[] =
+static const yytype_int16 yyrline[] =
 {
-       0,    91,    91,    92,    96,   100,   107,   108,   109,   113,
-     118,   125,   126,   127,   128,   129,   130,   134,   137,   144,
-     150,   155,   160,   165,   170,   175,   180,   181,   182,   183,
-     184,   185,   197,   198,   202,   203,   204,   205,   209
+       0,    85,    85,    86,    90,   102,   116,   117,   122,   123,
+     128,   136,   147,   148,   149,   150,   151,   152,   158,   166,
+     174,   182,   192,   204,   206,   251,   271,   273,   274,   275,
+     276,   277,   303,   311,   312,   316,   321,   322,   323,   324,
+     331,   369,   406
 };
 #endif
 
@@ -602,10 +608,10 @@ static const char *const yytname[] =
   "LCURLY", "RCURLY", "LBRACKET", "RBRACKET", "DOT", "SEMICOLON", "COLON",
   "COMMA", "VAR", "IF", "ELSE", "WHILE", "FOR", "PRINT", "RETURN",
   "ASSIGN", "OR", "AND", "EQ", "NEQ", "LT", "GT", "LTE", "GTE", "PLUS",
-  "MINUS", "MULTIPLY", "DIVIDE", "INC", "DEC", "NOT", "POWER",
-  "UNARY_MINUS", "NEG", "$accept", "program", "function", "params",
-  "param", "type", "expression", "statements", "statement",
-  "print_statement", YY_NULLPTR
+  "MINUS", "MULTIPLY", "DIVIDE", "POWER", "NOT", "UNARY_MINUS", "INC",
+  "DEC", "$accept", "program", "function", "params", "param_list", "param",
+  "type", "literal", "expression", "statements", "statement",
+  "declaration_statement", "print_statement", YY_NULLPTR
 };
 
 static const char *
@@ -615,7 +621,7 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 }
 #endif
 
-#define YYPACT_NINF (-32)
+#define YYPACT_NINF (-44)
 
 #define yypact_value_is_default(Yyn) \
   ((Yyn) == YYPACT_NINF)
@@ -629,14 +635,15 @@ yysymbol_name (yysymbol_kind_t yysymbol)
    STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-       3,     6,    97,   -32,     4,   -23,   -32,   -32,   -32,   -32,
-     -32,   126,   -32,    14,    20,   126,   -32,    94,   -32,   -32,
-      22,   142,   126,   -11,    21,    -2,   126,   -32,   -32,   126,
-     126,   126,   126,     9,   -32,   -32,   -32,   -32,   -32,   -32,
-       8,    45,   -32,   -32,   142,    13,   -31,   -31,   -32,   -32,
-      18,    41,    -9,   -32,   126,    12,    23,   142,    24,   -15,
-       9,    45,   126,   -32,   -32,   142,   -32,   142,   -32,    45,
-     -32,    60,    31,   -32,   -32,    90,   -32
+      18,    19,   119,   -44,     0,   -18,   -44,   -44,   -44,   -44,
+     -44,     4,   -44,    24,     5,     4,     4,   -44,   -44,    96,
+     -44,    12,   -44,    21,   140,     4,    10,    -4,    26,    22,
+       4,   -44,   -44,   -44,     4,     4,     4,     4,   -44,    33,
+     -44,   -44,   -44,   -44,   -44,   -44,    15,    86,   -44,   -44,
+     140,    37,   -43,   -43,   -44,   -44,    25,    50,    39,    30,
+     -44,     4,    41,    47,   140,    48,    -2,    33,    86,     4,
+     -44,   -44,   140,   -44,   140,   -44,    86,   -44,    59,    53,
+     -44,   -44,    89,   -44
 };
 
 /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -644,26 +651,29 @@ static const yytype_int16 yypact[] =
    means the default is an error.  */
 static const yytype_int8 yydefact[] =
 {
-      32,     0,     3,     1,     0,    17,    21,    22,    23,    24,
-      25,     0,    32,     0,     0,     0,    35,     0,    33,    36,
-       0,     0,     0,     0,     0,     0,     0,    31,    34,     0,
-       0,     0,     0,     6,    11,    13,    14,    12,    15,    16,
-       0,    20,    26,    37,     0,     0,    27,    28,    29,    30,
-       0,     0,     0,     7,     0,     0,     0,     0,     0,     0,
-       0,    18,     0,    38,     9,     0,    32,     0,     8,    19,
-      10,     0,     0,     4,    32,     0,     5
+      33,     0,     3,     1,     0,    25,    18,    19,    20,    21,
+      22,     0,    33,     0,     0,     0,     0,    36,    23,     0,
+      34,     0,    38,     0,     0,     0,    25,     0,     0,     0,
+       0,    31,    32,    35,     0,     0,     0,     0,    37,     6,
+      12,    14,    15,    13,    16,    17,     0,    24,    26,    39,
+       0,     0,    27,    28,    29,    30,     0,     0,     0,     7,
+       8,     0,     0,     0,     0,     0,     0,     0,    40,     0,
+      42,    10,     0,    33,     0,     9,    41,    11,     0,     0,
+       4,    33,     0,     5
 };
 
 /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int8 yypgoto[] =
 {
-     -32,   -32,   -32,   -32,    -5,    16,   -10,   -12,   -32,   -32
+     -44,   -44,   -44,   -44,   -44,    17,    38,   -44,   -10,   -12,
+     -44,   -44,   -44
 };
 
 /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int8 yydefgoto[] =
 {
-       0,     1,    16,    52,    53,    40,    17,     2,    18,    19
+       0,     1,    17,    58,    59,    60,    46,    18,    19,     2,
+      20,    21,    22
 };
 
 /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -671,78 +681,79 @@ static const yytype_int8 yydefgoto[] =
    number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int8 yytable[] =
 {
-      24,    23,    21,    -2,    66,    27,     3,    42,    20,    59,
-      67,    22,    41,    50,    31,    32,    45,    60,    25,    46,
-      47,    48,    49,    44,     4,     5,     6,     7,     8,     9,
-      10,    56,    29,    30,    31,    32,    51,    26,    11,    33,
-      12,    43,    54,    57,    61,    58,    62,    63,    13,    65,
-      74,     0,    69,    14,    71,    68,    29,    30,    31,    32,
-      55,     0,    75,     4,     5,     6,     7,     8,     9,    10,
-       0,     0,    15,    64,     0,     0,     0,    11,     0,    12,
-      73,    70,     0,    72,     0,     0,     0,    13,    29,    30,
-      31,    32,    14,     4,     5,     6,     7,     8,     9,    10,
-       4,     5,     6,     7,     8,     9,    10,    11,     0,    12,
-      76,    15,     0,     0,    11,     0,    12,    13,    28,     0,
-       0,     0,    14,     0,    13,     0,     0,     0,     0,    14,
-       5,     6,     7,     8,     9,    10,     0,    29,    30,    31,
-      32,    15,     0,    11,     0,     0,     0,     0,    15,     0,
-       0,     0,    34,    13,    35,    36,    37,    38,    39,     0,
-       0,     0,     0,     0,     0,     0,     0,     0,     0,     0,
-       0,     0,     0,     0,     0,     0,     0,    15
+      28,    27,    36,    37,    23,    31,    32,    24,    26,     6,
+       7,     8,     9,    10,    48,    47,    25,    73,    -2,     3,
+      51,    11,    30,    74,    52,    53,    54,    55,    29,     4,
+       5,     6,     7,     8,     9,    10,    38,    56,    39,    34,
+      35,    36,    37,    11,    25,    12,    49,    50,    15,    61,
+      64,    68,    16,    13,    65,    63,    67,    66,    14,    76,
+      57,    78,     4,     5,     6,     7,     8,     9,    10,    82,
+      15,    70,    81,    72,    16,    69,    11,     0,    12,    80,
+      34,    35,    36,    37,    75,     0,    13,     0,    62,     0,
+       0,    14,     4,     5,     6,     7,     8,     9,    10,     0,
+       0,     0,    71,    15,     0,     0,    11,    16,    12,    83,
+      77,     0,    79,     0,     0,     0,    13,     0,     0,     0,
+      33,    14,     4,     5,     6,     7,     8,     9,    10,    34,
+      35,    36,    37,    15,     0,     0,    11,    16,    12,    34,
+      35,    36,    37,     0,     0,     0,    13,     0,     0,     0,
+      40,    14,    41,    42,    43,    44,    45,     0,     0,     0,
+       0,     0,     0,    15,     0,     0,     0,    16
 };
 
 static const yytype_int8 yycheck[] =
 {
-      12,    11,    25,     0,    19,    15,     0,    18,     4,    18,
-      25,    34,    22,     4,    45,    46,    26,    26,     4,    29,
-      30,    31,    32,    25,     3,     4,     5,     6,     7,     8,
-       9,    18,    43,    44,    45,    46,    27,    17,    17,    17,
-      19,    20,    34,    25,    54,     4,    34,    24,    27,    25,
-      19,    -1,    62,    32,    66,    60,    43,    44,    45,    46,
-      44,    -1,    74,     3,     4,     5,     6,     7,     8,     9,
-      -1,    -1,    51,    57,    -1,    -1,    -1,    17,    -1,    19,
-      20,    65,    -1,    67,    -1,    -1,    -1,    27,    43,    44,
-      45,    46,    32,     3,     4,     5,     6,     7,     8,     9,
-       3,     4,     5,     6,     7,     8,     9,    17,    -1,    19,
-      20,    51,    -1,    -1,    17,    -1,    19,    27,    24,    -1,
-      -1,    -1,    32,    -1,    27,    -1,    -1,    -1,    -1,    32,
-       4,     5,     6,     7,     8,     9,    -1,    43,    44,    45,
-      46,    51,    -1,    17,    -1,    -1,    -1,    -1,    51,    -1,
-      -1,    -1,    10,    27,    12,    13,    14,    15,    16,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,    -1,
-      -1,    -1,    -1,    -1,    -1,    -1,    -1,    51
+      12,    11,    45,    46,     4,    15,    16,    25,     4,     5,
+       6,     7,     8,     9,    18,    25,    34,    19,     0,     0,
+      30,    17,    17,    25,    34,    35,    36,    37,     4,     3,
+       4,     5,     6,     7,     8,     9,    24,     4,    17,    43,
+      44,    45,    46,    17,    34,    19,    20,    25,    44,    34,
+      25,    61,    48,    27,     4,    18,    26,    18,    32,    69,
+      27,    73,     3,     4,     5,     6,     7,     8,     9,    81,
+      44,    24,    19,    25,    48,    34,    17,    -1,    19,    20,
+      43,    44,    45,    46,    67,    -1,    27,    -1,    50,    -1,
+      -1,    32,     3,     4,     5,     6,     7,     8,     9,    -1,
+      -1,    -1,    64,    44,    -1,    -1,    17,    48,    19,    20,
+      72,    -1,    74,    -1,    -1,    -1,    27,    -1,    -1,    -1,
+      24,    32,     3,     4,     5,     6,     7,     8,     9,    43,
+      44,    45,    46,    44,    -1,    -1,    17,    48,    19,    43,
+      44,    45,    46,    -1,    -1,    -1,    27,    -1,    -1,    -1,
+      10,    32,    12,    13,    14,    15,    16,    -1,    -1,    -1,
+      -1,    -1,    -1,    44,    -1,    -1,    -1,    48
 };
 
 /* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
    state STATE-NUM.  */
 static const yytype_int8 yystos[] =
 {
-       0,    54,    60,     0,     3,     4,     5,     6,     7,     8,
-       9,    17,    19,    27,    32,    51,    55,    59,    61,    62,
-       4,    25,    34,    59,    60,     4,    17,    59,    24,    43,
-      44,    45,    46,    17,    10,    12,    13,    14,    15,    16,
-      58,    59,    18,    20,    25,    59,    59,    59,    59,    59,
-       4,    27,    56,    57,    34,    58,    18,    25,     4,    18,
-      26,    59,    34,    24,    58,    25,    19,    25,    57,    59,
-      58,    60,    58,    20,    19,    60,    20
+       0,    53,    61,     0,     3,     4,     5,     6,     7,     8,
+       9,    17,    19,    27,    32,    44,    48,    54,    59,    60,
+      62,    63,    64,     4,    25,    34,     4,    60,    61,     4,
+      17,    60,    60,    24,    43,    44,    45,    46,    24,    17,
+      10,    12,    13,    14,    15,    16,    58,    60,    18,    20,
+      25,    60,    60,    60,    60,    60,     4,    27,    55,    56,
+      57,    34,    58,    18,    25,     4,    18,    26,    60,    34,
+      24,    58,    25,    19,    25,    57,    60,    58,    61,    58,
+      20,    19,    61,    20
 };
 
 /* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr1[] =
 {
-       0,    53,    54,    54,    55,    55,    56,    56,    56,    57,
-      57,    58,    58,    58,    58,    58,    58,    59,    59,    59,
-      59,    59,    59,    59,    59,    59,    59,    59,    59,    59,
-      59,    59,    60,    60,    61,    61,    61,    61,    62
+       0,    52,    53,    53,    54,    54,    55,    55,    56,    56,
+      57,    57,    58,    58,    58,    58,    58,    58,    59,    59,
+      59,    59,    59,    60,    60,    60,    60,    60,    60,    60,
+      60,    60,    60,    61,    61,    62,    62,    62,    62,    62,
+      63,    63,    64
 };
 
 /* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
-       0,     2,     0,     1,     8,    10,     0,     1,     3,     3,
-       4,     1,     1,     1,     1,     1,     1,     1,     5,     6,
-       3,     1,     1,     1,     1,     1,     3,     3,     3,     3,
-       3,     2,     0,     2,     2,     1,     1,     3,     5
+       0,     2,     0,     1,     8,    10,     0,     1,     1,     3,
+       3,     4,     1,     1,     1,     1,     1,     1,     1,     1,
+       1,     1,     1,     1,     3,     1,     3,     3,     3,     3,
+       3,     2,     2,     0,     2,     2,     1,     2,     1,     3,
+       5,     6,     5
 };
 
 
@@ -1475,231 +1486,482 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
+  case 2: /* program: %empty  */
+#line 85 "parser.y"
+             {}
+#line 1493 "parser.tab.c"
+    break;
+
+  case 3: /* program: statements  */
+#line 86 "parser.y"
+                 {}
+#line 1499 "parser.tab.c"
+    break;
+
   case 4: /* function: FUNC IDENT LPAREN params RPAREN LCURLY statements RCURLY  */
-#line 96 "parser.y"
+#line 90 "parser.y"
                                                              {
-        symrec* func = putsym((yyvsp[-6].string_val), SYM_FUNC);
-        set_func_return_type(func, TYPE_VOID);
+        symrec* func = getsym((yyvsp[-6].string_val));
+        if (func) {
+             char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Function redefinition '%s'", (yyvsp[-6].string_val)); yyerror(err_msg);
+             free((yyvsp[-6].string_val));
+        } else {
+            func = putsym((yyvsp[-6].string_val), SYM_FUNC);
+            set_func_return_type(func, TYPE_VOID);
+            
+            free((yyvsp[-6].string_val)); 
+        }
     }
-#line 1485 "parser.tab.c"
+#line 1516 "parser.tab.c"
     break;
 
   case 5: /* function: FUNC IDENT LPAREN params RPAREN COLON type LCURLY statements RCURLY  */
-#line 100 "parser.y"
+#line 102 "parser.y"
                                                                           {
-        symrec* func = putsym((yyvsp[-8].string_val), SYM_FUNC);
-        set_func_return_type(func, (yyvsp[-3].type_val));
+         symrec* func = getsym((yyvsp[-8].string_val));
+         if (func) {
+             char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Function redefinition '%s'", (yyvsp[-8].string_val)); yyerror(err_msg);
+             free((yyvsp[-8].string_val));
+         } else {
+            func = putsym((yyvsp[-8].string_val), SYM_FUNC);
+            set_func_return_type(func, (yyvsp[-3].type_val));
+            free((yyvsp[-8].string_val));
+         }
     }
-#line 1494 "parser.tab.c"
+#line 1532 "parser.tab.c"
     break;
 
-  case 9: /* param: IDENT COLON type  */
-#line 113 "parser.y"
-                     {
-        symrec* p = putsym((yyvsp[-2].string_val), SYM_VAR);
-        set_var_type(p, (yyvsp[0].type_val));
-        p->is_constant = true;
-    }
-#line 1504 "parser.tab.c"
+  case 6: /* params: %empty  */
+#line 116 "parser.y"
+             {}
+#line 1538 "parser.tab.c"
     break;
 
-  case 10: /* param: VAR IDENT COLON type  */
-#line 118 "parser.y"
-                           {
-        symrec* p = putsym((yyvsp[-2].string_val), SYM_VAR);
-        set_var_type(p, (yyvsp[0].type_val));
-    }
-#line 1513 "parser.tab.c"
+  case 7: /* params: param_list  */
+#line 117 "parser.y"
+                 {}
+#line 1544 "parser.tab.c"
     break;
 
-  case 11: /* type: T_INTEGER  */
-#line 125 "parser.y"
-              { (yyval.type_val) = TYPE_INT; }
-#line 1519 "parser.tab.c"
+  case 8: /* param_list: param  */
+#line 122 "parser.y"
+            {}
+#line 1550 "parser.tab.c"
     break;
 
-  case 12: /* type: T_DOUBLE  */
-#line 126 "parser.y"
-               { (yyval.type_val) = TYPE_DOUBLE; }
-#line 1525 "parser.tab.c"
+  case 9: /* param_list: param_list COMMA param  */
+#line 123 "parser.y"
+                             {}
+#line 1556 "parser.tab.c"
     break;
 
-  case 13: /* type: T_CHAR  */
-#line 127 "parser.y"
-             { (yyval.type_val) = TYPE_CHAR; }
-#line 1531 "parser.tab.c"
-    break;
-
-  case 14: /* type: T_STRING  */
+  case 10: /* param: IDENT COLON type  */
 #line 128 "parser.y"
-               { (yyval.type_val) = TYPE_STRING; }
-#line 1537 "parser.tab.c"
-    break;
-
-  case 15: /* type: T_BOOL  */
-#line 129 "parser.y"
-             { (yyval.type_val) = TYPE_BOOL; }
-#line 1543 "parser.tab.c"
-    break;
-
-  case 16: /* type: T_VOID  */
-#line 130 "parser.y"
-             { (yyval.type_val) = TYPE_VOID; }
-#line 1549 "parser.tab.c"
-    break;
-
-  case 17: /* expression: IDENT  */
-#line 134 "parser.y"
-          {
-        if (!((yyval.sym_ptr) = getsym((yyvsp[0].string_val)))) yyerror("Undefined identifier");
-    }
-#line 1557 "parser.tab.c"
-    break;
-
-  case 18: /* expression: IDENT COLON type ASSIGN expression  */
-#line 137 "parser.y"
-                                         {
-        if ((yyvsp[0].sym_ptr)->type != (yyvsp[-2].type_val)) yyerror("Type mismatch");
-        (yyval.sym_ptr) = putsym((yyvsp[-4].string_val), SYM_VAR);
-        set_var_type((yyval.sym_ptr), (yyvsp[-2].type_val));
-        (yyval.sym_ptr)->is_constant = true;
-        memcpy(&(yyval.sym_ptr)->value.var, &(yyvsp[0].sym_ptr)->value.var, sizeof((yyvsp[0].sym_ptr)->value.var));
+                     {
+        symrec* p = putsym((yyvsp[-2].string_val), SYM_VAR); 
+        if(p) { 
+            set_var_type(p, (yyvsp[0].type_val));
+            p->is_constant = true; 
+        }
+        free((yyvsp[-2].string_val)); 
     }
 #line 1569 "parser.tab.c"
     break;
 
-  case 19: /* expression: VAR IDENT COLON type ASSIGN expression  */
-#line 144 "parser.y"
-                                             {
-        if ((yyvsp[0].sym_ptr)->type != (yyvsp[-2].type_val)) yyerror("Type mismatch");
-        (yyval.sym_ptr) = putsym((yyvsp[-4].string_val), SYM_VAR);
-        set_var_type((yyval.sym_ptr), (yyvsp[-2].type_val));
-        memcpy(&(yyval.sym_ptr)->value.var, &(yyvsp[0].sym_ptr)->value.var, sizeof((yyvsp[0].sym_ptr)->value.var));
+  case 11: /* param: VAR IDENT COLON type  */
+#line 136 "parser.y"
+                           { 
+        symrec* p = putsym((yyvsp[-2].string_val), SYM_VAR);
+        if(p) {
+            set_var_type(p, (yyvsp[0].type_val));
+            p->is_constant = false; 
+        }
+        free((yyvsp[-2].string_val)); 
     }
-#line 1580 "parser.tab.c"
+#line 1582 "parser.tab.c"
     break;
 
-  case 20: /* expression: IDENT ASSIGN expression  */
-#line 150 "parser.y"
-                              {
-        if (!((yyval.sym_ptr) = getsym((yyvsp[-2].string_val)))) yyerror("Undefined identifier");
-        if ((yyvsp[0].sym_ptr)->type != (yyval.sym_ptr)->type) yyerror("Type mismatch");
-        memcpy(&(yyval.sym_ptr)->value.var, &(yyvsp[0].sym_ptr)->value.var, sizeof((yyvsp[0].sym_ptr)->value.var));
-    }
-#line 1590 "parser.tab.c"
+  case 12: /* type: T_INTEGER  */
+#line 147 "parser.y"
+                { (yyval.type_val) = TYPE_INT; }
+#line 1588 "parser.tab.c"
     break;
 
-  case 21: /* expression: INTEGER  */
-#line 155 "parser.y"
-              {
-        (yyval.sym_ptr) = putsym("_literal", SYM_VAR);
-        set_var_type((yyval.sym_ptr), TYPE_INT);
-        set_var_value_int((yyval.sym_ptr), (yyvsp[0].int_val));
-    }
+  case 13: /* type: T_DOUBLE  */
+#line 148 "parser.y"
+                { (yyval.type_val) = TYPE_DOUBLE; }
+#line 1594 "parser.tab.c"
+    break;
+
+  case 14: /* type: T_CHAR  */
+#line 149 "parser.y"
+                { (yyval.type_val) = TYPE_CHAR; }
 #line 1600 "parser.tab.c"
     break;
 
-  case 22: /* expression: DOUBLE  */
-#line 160 "parser.y"
+  case 15: /* type: T_STRING  */
+#line 150 "parser.y"
+                { (yyval.type_val) = TYPE_STRING; }
+#line 1606 "parser.tab.c"
+    break;
+
+  case 16: /* type: T_BOOL  */
+#line 151 "parser.y"
+                { (yyval.type_val) = TYPE_BOOL; }
+#line 1612 "parser.tab.c"
+    break;
+
+  case 17: /* type: T_VOID  */
+#line 152 "parser.y"
+                { (yyval.type_val) = TYPE_VOID; }
+#line 1618 "parser.tab.c"
+    break;
+
+  case 18: /* literal: INTEGER  */
+#line 158 "parser.y"
+            {
+        (yyval.sym_ptr) = putsym("_literal_int", SYM_VAR);
+        if((yyval.sym_ptr)) { 
+             set_var_type((yyval.sym_ptr), TYPE_INT);
+             set_var_value_int((yyval.sym_ptr), (yyvsp[0].int_val));
+             (yyval.sym_ptr)->is_constant = true; 
+        }
+    }
+#line 1631 "parser.tab.c"
+    break;
+
+  case 19: /* literal: DOUBLE  */
+#line 166 "parser.y"
              {
-        (yyval.sym_ptr) = putsym("_literal", SYM_VAR);
-        set_var_type((yyval.sym_ptr), TYPE_DOUBLE);
-        set_var_value_double((yyval.sym_ptr), (yyvsp[0].double_val));
+        (yyval.sym_ptr) = putsym("_literal_double", SYM_VAR);
+        if((yyval.sym_ptr)) {
+            set_var_type((yyval.sym_ptr), TYPE_DOUBLE);
+            set_var_value_double((yyval.sym_ptr), (yyvsp[0].double_val));
+            (yyval.sym_ptr)->is_constant = true;
+        }
     }
-#line 1610 "parser.tab.c"
+#line 1644 "parser.tab.c"
     break;
 
-  case 23: /* expression: CHAR  */
-#line 165 "parser.y"
-           {
-        (yyval.sym_ptr) = putsym("_literal", SYM_VAR);
-        set_var_type((yyval.sym_ptr), TYPE_CHAR);
-        set_var_value_char((yyval.sym_ptr), (yyvsp[0].char_val));
+  case 20: /* literal: CHAR  */
+#line 174 "parser.y"
+           { 
+        (yyval.sym_ptr) = putsym("_literal_char", SYM_VAR);
+        if((yyval.sym_ptr)) {
+            set_var_type((yyval.sym_ptr), TYPE_CHAR);
+            set_var_value_char((yyval.sym_ptr), (yyvsp[0].char_val));
+            (yyval.sym_ptr)->is_constant = true;
+        }
     }
-#line 1620 "parser.tab.c"
+#line 1657 "parser.tab.c"
     break;
 
-  case 24: /* expression: STRING  */
-#line 170 "parser.y"
-             {
-        (yyval.sym_ptr) = putsym("_literal", SYM_VAR);
-        set_var_type((yyval.sym_ptr), TYPE_STRING);
-        set_var_value_string((yyval.sym_ptr), (yyvsp[0].string_val));
+  case 21: /* literal: STRING  */
+#line 182 "parser.y"
+             { 
+        (yyval.sym_ptr) = putsym("_literal_string", SYM_VAR);
+        if ((yyval.sym_ptr)) {
+            set_var_type((yyval.sym_ptr), TYPE_STRING);
+            
+            set_var_value_string((yyval.sym_ptr), (yyvsp[0].string_val));
+            (yyval.sym_ptr)->is_constant = true;
+        }
+        free((yyvsp[0].string_val)); 
     }
-#line 1630 "parser.tab.c"
+#line 1672 "parser.tab.c"
     break;
 
-  case 25: /* expression: BOOL  */
-#line 175 "parser.y"
-           {
-        (yyval.sym_ptr) = putsym("_literal", SYM_VAR);
-        set_var_type((yyval.sym_ptr), TYPE_BOOL);
-        set_var_value_bool((yyval.sym_ptr), (yyvsp[0].bool_val));
+  case 22: /* literal: BOOL  */
+#line 192 "parser.y"
+           { 
+        (yyval.sym_ptr) = putsym("_literal_bool", SYM_VAR);
+        if ((yyval.sym_ptr)) {
+            set_var_type((yyval.sym_ptr), TYPE_BOOL);
+            set_var_value_bool((yyval.sym_ptr), (yyvsp[0].bool_val));
+            (yyval.sym_ptr)->is_constant = true;
+        }
     }
-#line 1640 "parser.tab.c"
+#line 1685 "parser.tab.c"
+    break;
+
+  case 24: /* expression: IDENT ASSIGN expression  */
+#line 206 "parser.y"
+                              {
+        (yyval.sym_ptr) = getsym((yyvsp[-2].string_val));
+        if (!(yyval.sym_ptr)) {
+            char err_msg[256];
+            snprintf(err_msg, sizeof(err_msg), "Assignment to undeclared identifier '%s'", (yyvsp[-2].string_val));
+            yyerror(err_msg);
+             (yyval.sym_ptr) = putsym((yyvsp[-2].string_val), SYM_VAR); 
+             if((yyval.sym_ptr)) set_var_type((yyval.sym_ptr), TYPE_UNDEFINED); 
+             else (yyval.sym_ptr) = NULL; 
+        } else if ((yyval.sym_ptr)->kind != SYM_VAR) {
+            char err_msg[256];
+            snprintf(err_msg, sizeof(err_msg), "Assignment target '%s' is not a variable", (yyvsp[-2].string_val));
+            yyerror(err_msg);
+        } else if ((yyval.sym_ptr)->is_constant) {
+            char err_msg[256];
+            snprintf(err_msg, sizeof(err_msg), "Assignment to constant variable '%s'", (yyvsp[-2].string_val));
+            yyerror(err_msg);
+        } else if (!(yyvsp[0].sym_ptr) || (yyvsp[0].sym_ptr)->type == TYPE_UNDEFINED) { 
+            char err_msg[256];
+            snprintf(err_msg, sizeof(err_msg), "Cannot assign undefined value to '%s'", (yyvsp[-2].string_val));
+            yyerror(err_msg);
+        } else if ((yyvsp[0].sym_ptr)->type != (yyval.sym_ptr)->type) {
+            
+            char err_msg[256];
+            
+            snprintf(err_msg, sizeof(err_msg), "Type mismatch in assignment to '%s' (expected %d, got %d)", (yyvsp[-2].string_val), (yyval.sym_ptr)->type, (yyvsp[0].sym_ptr)->type);
+            yyerror(err_msg);
+        } else {
+            switch ((yyval.sym_ptr)->type) {
+                case TYPE_INT: set_var_value_int((yyval.sym_ptr), (yyvsp[0].sym_ptr)->value.var.int_val); break;
+                case TYPE_DOUBLE: set_var_value_double((yyval.sym_ptr), (yyvsp[0].sym_ptr)->value.var.double_val); break;
+                case TYPE_CHAR: set_var_value_char((yyval.sym_ptr), (yyvsp[0].sym_ptr)->value.var.char_val); break;
+                case TYPE_STRING:
+                    
+                    if ((yyval.sym_ptr)->value.var.string_val) free((yyval.sym_ptr)->value.var.string_val);
+                     
+                    set_var_value_string((yyval.sym_ptr), (yyvsp[0].sym_ptr)->value.var.string_val ? (yyvsp[0].sym_ptr)->value.var.string_val : "");
+                    break;
+                case TYPE_BOOL: set_var_value_bool((yyval.sym_ptr), (yyvsp[0].sym_ptr)->value.var.bool_val); break;
+                default: yyerror("Unhandled type in assignment"); break;
+             }
+        }
+        free((yyvsp[-2].string_val)); 
+        
+    }
+#line 1735 "parser.tab.c"
+    break;
+
+  case 25: /* expression: IDENT  */
+#line 251 "parser.y"
+            { 
+        (yyval.sym_ptr) = getsym((yyvsp[0].string_val));
+        if (!(yyval.sym_ptr)) {
+            char err_msg[256];
+            snprintf(err_msg, sizeof(err_msg), "Undefined identifier '%s'", (yyvsp[0].string_val));
+            yyerror(err_msg);
+             (yyval.sym_ptr) = putsym((yyvsp[0].string_val), SYM_VAR); 
+             if((yyval.sym_ptr)) set_var_type((yyval.sym_ptr), TYPE_UNDEFINED);
+             else (yyval.sym_ptr) = NULL; 
+        } else if ((yyval.sym_ptr)->kind != SYM_VAR) { 
+             char err_msg[256];
+             snprintf(err_msg, sizeof(err_msg), "'%s' is not a variable", (yyvsp[0].string_val));
+             yyerror(err_msg);
+             
+             
+             if((yyval.sym_ptr)) set_var_type((yyval.sym_ptr), TYPE_UNDEFINED); 
+        }
+        free((yyvsp[0].string_val)); 
+    }
+#line 1759 "parser.tab.c"
     break;
 
   case 26: /* expression: LPAREN expression RPAREN  */
-#line 180 "parser.y"
+#line 271 "parser.y"
                                { (yyval.sym_ptr) = (yyvsp[-1].sym_ptr); }
-#line 1646 "parser.tab.c"
+#line 1765 "parser.tab.c"
     break;
 
   case 27: /* expression: expression PLUS expression  */
-#line 181 "parser.y"
+#line 273 "parser.y"
                                   { handle_binop((yyvsp[-2].sym_ptr), (yyvsp[0].sym_ptr), &(yyval.sym_ptr), OP_ADD); }
-#line 1652 "parser.tab.c"
+#line 1771 "parser.tab.c"
     break;
 
   case 28: /* expression: expression MINUS expression  */
-#line 182 "parser.y"
+#line 274 "parser.y"
                                   { handle_binop((yyvsp[-2].sym_ptr), (yyvsp[0].sym_ptr), &(yyval.sym_ptr), OP_SUB); }
-#line 1658 "parser.tab.c"
+#line 1777 "parser.tab.c"
     break;
 
   case 29: /* expression: expression MULTIPLY expression  */
-#line 183 "parser.y"
+#line 275 "parser.y"
                                      { handle_binop((yyvsp[-2].sym_ptr), (yyvsp[0].sym_ptr), &(yyval.sym_ptr), OP_MUL); }
-#line 1664 "parser.tab.c"
+#line 1783 "parser.tab.c"
     break;
 
   case 30: /* expression: expression DIVIDE expression  */
-#line 184 "parser.y"
+#line 276 "parser.y"
                                    { handle_binop((yyvsp[-2].sym_ptr), (yyvsp[0].sym_ptr), &(yyval.sym_ptr), OP_DIV); }
-#line 1670 "parser.tab.c"
+#line 1789 "parser.tab.c"
     break;
 
-  case 31: /* expression: UNARY_MINUS expression  */
-#line 185 "parser.y"
-                                       {
-        (yyval.sym_ptr) = putsym("_temp", SYM_VAR);
-        set_var_type((yyval.sym_ptr), (yyvsp[0].sym_ptr)->type);
-        switch((yyvsp[0].sym_ptr)->type) {
-            case TYPE_INT: set_var_value_int((yyval.sym_ptr), -(yyvsp[0].sym_ptr)->value.var.int_val); break;
-            case TYPE_DOUBLE: set_var_value_double((yyval.sym_ptr), -(yyvsp[0].sym_ptr)->value.var.double_val); break;
-            default: yyerror("Invalid type for negation");
+  case 31: /* expression: MINUS expression  */
+#line 277 "parser.y"
+                                         { 
+        if (!(yyvsp[0].sym_ptr) || (yyvsp[0].sym_ptr)->type == TYPE_UNDEFINED) {
+            yyerror("Cannot negate undefined value");
+            (yyval.sym_ptr) = putsym("_temp_error", SYM_VAR); 
+            if((yyval.sym_ptr)) set_var_type((yyval.sym_ptr), TYPE_UNDEFINED); else (yyval.sym_ptr) = NULL;
+        } else if ((yyvsp[0].sym_ptr)->type == TYPE_INT) {
+            (yyval.sym_ptr) = putsym("_temp_neg_int", SYM_VAR);
+            if((yyval.sym_ptr)) {
+                 set_var_type((yyval.sym_ptr), TYPE_INT);
+                 set_var_value_int((yyval.sym_ptr), -(yyvsp[0].sym_ptr)->value.var.int_val);
+                 (yyval.sym_ptr)->is_constant = (yyvsp[0].sym_ptr)->is_constant; 
+            }
+        } else if ((yyvsp[0].sym_ptr)->type == TYPE_DOUBLE) {
+            (yyval.sym_ptr) = putsym("_temp_neg_double", SYM_VAR);
+             if((yyval.sym_ptr)) {
+                 set_var_type((yyval.sym_ptr), TYPE_DOUBLE);
+                 set_var_value_double((yyval.sym_ptr), -(yyvsp[0].sym_ptr)->value.var.double_val);
+                 (yyval.sym_ptr)->is_constant = (yyvsp[0].sym_ptr)->is_constant;
+             }
+        } else {
+            char err_msg[100]; snprintf(err_msg, sizeof(err_msg), "Invalid type (%d) for negation", (yyvsp[0].sym_ptr)->type); yyerror(err_msg);
+            (yyval.sym_ptr) = putsym("_temp_error", SYM_VAR); 
+            if((yyval.sym_ptr)) set_var_type((yyval.sym_ptr), TYPE_UNDEFINED); else (yyval.sym_ptr) = NULL;
         }
+        
     }
-#line 1684 "parser.tab.c"
+#line 1820 "parser.tab.c"
     break;
 
-  case 38: /* print_statement: PRINT LPAREN expression RPAREN SEMICOLON  */
-#line 209 "parser.y"
+  case 32: /* expression: NOT expression  */
+#line 303 "parser.y"
+                     { 
+         yyerror("NOT operator not yet implemented");
+         (yyval.sym_ptr) = putsym("_temp_error", SYM_VAR);
+         if((yyval.sym_ptr)) set_var_type((yyval.sym_ptr), TYPE_UNDEFINED); else (yyval.sym_ptr) = NULL;
+    }
+#line 1830 "parser.tab.c"
+    break;
+
+  case 33: /* statements: %empty  */
+#line 311 "parser.y"
+             {}
+#line 1836 "parser.tab.c"
+    break;
+
+  case 34: /* statements: statements statement  */
+#line 312 "parser.y"
+                           {}
+#line 1842 "parser.tab.c"
+    break;
+
+  case 35: /* statement: expression SEMICOLON  */
+#line 316 "parser.y"
+                           {
+          if ((yyvsp[-1].sym_ptr) && (strncmp((yyvsp[-1].sym_ptr)->name, "_literal", 8) == 0 || strncmp((yyvsp[-1].sym_ptr)->name, "_temp", 5) == 0)) { 
+              
+          }
+      }
+#line 1852 "parser.tab.c"
+    break;
+
+  case 39: /* statement: LCURLY statements RCURLY  */
+#line 324 "parser.y"
+                               {}
+#line 1858 "parser.tab.c"
+    break;
+
+  case 40: /* declaration_statement: IDENT COLON type ASSIGN expression  */
+#line 331 "parser.y"
+                                         {
+        symrec* existing = getsym((yyvsp[-4].string_val));
+        if (existing) {
+            
+            char err_msg[256];
+            snprintf(err_msg, sizeof(err_msg), "Redeclaration of '%s'", (yyvsp[-4].string_val));
+            yyerror(err_msg);
+        } else if (!(yyvsp[0].sym_ptr) || (yyvsp[0].sym_ptr)->type == TYPE_UNDEFINED) {
+             char err_msg[256];
+             snprintf(err_msg, sizeof(err_msg), "Cannot initialize constant '%s' with undefined value", (yyvsp[-4].string_val));
+             yyerror(err_msg);
+             
+             symrec* sym = putsym((yyvsp[-4].string_val), SYM_VAR);
+             if(sym) { set_var_type(sym, (yyvsp[-2].type_val)); sym->is_constant = true; }
+        } else if ((yyvsp[0].sym_ptr)->type != (yyvsp[-2].type_val)) {
+             
+            char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Type mismatch in constant '%s' initialization (expected %d, got %d)", (yyvsp[-4].string_val), (yyvsp[-2].type_val), (yyvsp[0].sym_ptr)->type); yyerror(err_msg);
+             symrec* sym = putsym((yyvsp[-4].string_val), SYM_VAR);
+             if(sym) { set_var_type(sym, (yyvsp[-2].type_val)); sym->is_constant = true; }
+        } else {
+            symrec* sym = putsym((yyvsp[-4].string_val), SYM_VAR);
+            if(sym) {
+                set_var_type(sym, (yyvsp[-2].type_val));
+                sym->is_constant = true; 
+                switch (sym->type) { 
+                    case TYPE_INT: set_var_value_int(sym, (yyvsp[0].sym_ptr)->value.var.int_val); break;
+                    case TYPE_DOUBLE: set_var_value_double(sym, (yyvsp[0].sym_ptr)->value.var.double_val); break;
+                    case TYPE_CHAR: set_var_value_char(sym, (yyvsp[0].sym_ptr)->value.var.char_val); break;
+                    case TYPE_STRING: set_var_value_string(sym, (yyvsp[0].sym_ptr)->value.var.string_val ? (yyvsp[0].sym_ptr)->value.var.string_val : ""); break;
+                    case TYPE_BOOL: set_var_value_bool(sym, (yyvsp[0].sym_ptr)->value.var.bool_val); break;
+                    default: yyerror("Unhandled type in const initialization"); break;
+                 }
+            }
+        }
+        free((yyvsp[-4].string_val)); 
+        
+    }
+#line 1900 "parser.tab.c"
+    break;
+
+  case 41: /* declaration_statement: VAR IDENT COLON type ASSIGN expression  */
+#line 369 "parser.y"
                                              {
-        switch((yyvsp[-2].sym_ptr)->type) {
-            case TYPE_INT: printf("%d\n", (yyvsp[-2].sym_ptr)->value.var.int_val); break;
-            case TYPE_DOUBLE: printf("%f\n", (yyvsp[-2].sym_ptr)->value.var.double_val); break;
-            case TYPE_CHAR: printf("%c\n", (yyvsp[-2].sym_ptr)->value.var.char_val); break;
-            case TYPE_STRING: printf("%s\n", (yyvsp[-2].sym_ptr)->value.var.string_val); break;
-            case TYPE_BOOL: printf("%s\n", (yyvsp[-2].sym_ptr)->value.var.bool_val ? "true" : "false"); break;
-            default: yyerror("Invalid type for print");
+        symrec* existing = getsym((yyvsp[-4].string_val));
+         if (existing) {
+            char err_msg[256];
+            snprintf(err_msg, sizeof(err_msg), "Redeclaration of '%s'", (yyvsp[-4].string_val));
+            yyerror(err_msg);
+         } else if (!(yyvsp[0].sym_ptr) || (yyvsp[0].sym_ptr)->type == TYPE_UNDEFINED) {
+             char err_msg[256];
+             snprintf(err_msg, sizeof(err_msg), "Cannot initialize variable '%s' with undefined value", (yyvsp[-4].string_val));
+             yyerror(err_msg);
+             symrec* sym = putsym((yyvsp[-4].string_val), SYM_VAR);
+             if(sym) { set_var_type(sym, (yyvsp[-2].type_val)); sym->is_constant = false; } 
+         } else if ((yyvsp[0].sym_ptr)->type != (yyvsp[-2].type_val)) {
+            char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Type mismatch in variable '%s' initialization (expected %d, got %d)", (yyvsp[-4].string_val), (yyvsp[-2].type_val), (yyvsp[0].sym_ptr)->type); yyerror(err_msg);
+             symrec* sym = putsym((yyvsp[-4].string_val), SYM_VAR);
+             if(sym) { set_var_type(sym, (yyvsp[-2].type_val)); sym->is_constant = false; }
+         } else {
+            symrec* sym = putsym((yyvsp[-4].string_val), SYM_VAR);
+            if(sym) {
+                set_var_type(sym, (yyvsp[-2].type_val));
+                sym->is_constant = false; 
+                switch (sym->type) { 
+                    case TYPE_INT: set_var_value_int(sym, (yyvsp[0].sym_ptr)->value.var.int_val); break;
+                    case TYPE_DOUBLE: set_var_value_double(sym, (yyvsp[0].sym_ptr)->value.var.double_val); break;
+                    case TYPE_CHAR: set_var_value_char(sym, (yyvsp[0].sym_ptr)->value.var.char_val); break;
+                    case TYPE_STRING: set_var_value_string(sym, (yyvsp[0].sym_ptr)->value.var.string_val ? (yyvsp[0].sym_ptr)->value.var.string_val : ""); break;
+                    case TYPE_BOOL: set_var_value_bool(sym, (yyvsp[0].sym_ptr)->value.var.bool_val); break;
+                    default: yyerror("Unhandled type in var initialization"); break;
+                 }
+            }
         }
+        free((yyvsp[-4].string_val)); 
+        
     }
-#line 1699 "parser.tab.c"
+#line 1939 "parser.tab.c"
+    break;
+
+  case 42: /* print_statement: PRINT LPAREN expression RPAREN SEMICOLON  */
+#line 406 "parser.y"
+                                             {
+        if (!(yyvsp[-2].sym_ptr) || (yyvsp[-2].sym_ptr)->type == TYPE_UNDEFINED) {
+             yyerror("Cannot print undefined value");
+        } else {
+            switch((yyvsp[-2].sym_ptr)->type) {
+                case TYPE_INT: printf("%d\n", (yyvsp[-2].sym_ptr)->value.var.int_val); break;
+                case TYPE_DOUBLE: printf("%f\n", (yyvsp[-2].sym_ptr)->value.var.double_val); break;
+                case TYPE_CHAR: printf("%c\n", (yyvsp[-2].sym_ptr)->value.var.char_val); break;
+                
+                case TYPE_STRING: printf("%s\n", (yyvsp[-2].sym_ptr)->value.var.string_val ? (yyvsp[-2].sym_ptr)->value.var.string_val : "(null)"); break;
+                case TYPE_BOOL: printf("%s\n", (yyvsp[-2].sym_ptr)->value.var.bool_val ? "true" : "false"); break;
+                case TYPE_VOID: yyerror("Cannot print void value"); break; 
+                default: yyerror("Invalid type for print"); 
+            }
+        }
+        
+    }
+#line 1961 "parser.tab.c"
     break;
 
 
-#line 1703 "parser.tab.c"
+#line 1965 "parser.tab.c"
 
       default: break;
     }
@@ -1923,7 +2185,9 @@ yyreturnlab:
   return yyresult;
 }
 
-#line 221 "parser.y"
+#line 425 "parser.y"
+
+
 
 
 data_type token_type_to_data_type(int token_type) {
@@ -1934,85 +2198,156 @@ data_type token_type_to_data_type(int token_type) {
         case T_STRING: return TYPE_STRING;
         case T_BOOL: return TYPE_BOOL;
         case T_VOID: return TYPE_VOID;
+        
         default: return TYPE_UNDEFINED;
     }
 }
 
+
 void handle_binop(symrec* left, symrec* right, symrec** result, int op) {
-    if (left->type != right->type) {
-        yyerror("Type mismatch in binary operation");
+    
+    if (!left || left->type == TYPE_UNDEFINED || !right || right->type == TYPE_UNDEFINED) {
+        yyerror("Operand undefined in binary operation");
+        *result = putsym("_temp_error", SYM_VAR);
+        if(*result) set_var_type(*result, TYPE_UNDEFINED); else *result = NULL;
         return;
     }
     
-    *result = putsym("_temp", SYM_VAR);
-    set_var_type(*result, left->type);
+    bool string_concat = (op == OP_ADD && (left->type == TYPE_STRING || right->type == TYPE_STRING));
+
+    if (!string_concat && left->type != right->type) {
+        
+        if ((left->type == TYPE_INT && right->type == TYPE_DOUBLE) ||
+            (left->type == TYPE_DOUBLE && right->type == TYPE_INT)) {
+             yyerror("Implicit type promotion (int/double) not yet implemented");
+             *result = putsym("_temp_error", SYM_VAR);
+             if(*result) set_var_type(*result, TYPE_UNDEFINED); else *result = NULL;
+             return;
+        } else {
+             
+             char err_msg[100]; snprintf(err_msg, sizeof(err_msg), "Type mismatch in binary operation (%d %d)", left->type, right->type); yyerror(err_msg);
+            *result = putsym("_temp_error", SYM_VAR);
+             if(*result) set_var_type(*result, TYPE_UNDEFINED); else *result = NULL;
+            return;
+        }
+    }
     
-    switch(left->type) {
+    *result = putsym("_temp_binop", SYM_VAR); 
+    if (!*result) { yyerror("Memory allocation failed for temporary result"); return; } 
+
+    data_type result_type = left->type; 
+    if (string_concat) result_type = TYPE_STRING; 
+
+    set_var_type(*result, result_type);
+    (*result)->is_constant = left->is_constant && right->is_constant; 
+
+    switch(result_type) { 
         case TYPE_INT:
-            switch(op) {
-                case OP_ADD: set_var_value_int(*result, left->value.var.int_val + right->value.var.int_val); break;
-                case OP_SUB: set_var_value_int(*result, left->value.var.int_val - right->value.var.int_val); break;
-                case OP_MUL: set_var_value_int(*result, left->value.var.int_val * right->value.var.int_val); break;
-                case OP_DIV: 
-                    if (right->value.var.int_val == 0) yyerror("Division by zero");
-                    else set_var_value_int(*result, left->value.var.int_val / right->value.var.int_val);
-                    break;
+            {
+                int lval = left->value.var.int_val; 
+                int rval = right->value.var.int_val;
+                int res_val;
+                switch(op) {
+                    case OP_ADD: res_val = lval + rval; break;
+                    case OP_SUB: res_val = lval - rval; break;
+                    case OP_MUL: res_val = lval * rval; break;
+                    case OP_DIV:
+                        if (rval == 0) { yyerror("Integer division by zero"); set_var_type(*result, TYPE_UNDEFINED); return; }
+                        res_val = lval / rval; break;
+                    default: yyerror("Unknown integer operation"); set_var_type(*result, TYPE_UNDEFINED); return;
+                }
+                set_var_value_int(*result, res_val);
             }
             break;
         case TYPE_DOUBLE:
-            switch(op) {
-                case OP_ADD: set_var_value_double(*result, left->value.var.double_val + right->value.var.double_val); break;
-                case OP_SUB: set_var_value_double(*result, left->value.var.double_val - right->value.var.double_val); break;
-                case OP_MUL: set_var_value_double(*result, left->value.var.double_val * right->value.var.double_val); break;
-                case OP_DIV: 
-                    if (right->value.var.double_val == 0.0) yyerror("Division by zero");
-                    else set_var_value_double(*result, left->value.var.double_val / right->value.var.double_val);
-                    break;
+             {
+                
+                double lval = (left->type == TYPE_DOUBLE) ? left->value.var.double_val : (double)left->value.var.int_val;
+                double rval = (right->type == TYPE_DOUBLE) ? right->value.var.double_val : (double)right->value.var.int_val;
+                double res_val;
+                switch(op) {
+                    case OP_ADD: res_val = lval + rval; break;
+                    case OP_SUB: res_val = lval - rval; break;
+                    case OP_MUL: res_val = lval * rval; break;
+                    case OP_DIV:
+                        if (rval == 0.0) { yyerror("Floating point division by zero"); set_var_type(*result, TYPE_UNDEFINED); return; }
+                        res_val = lval / rval; break;
+                    default: yyerror("Unknown double operation"); set_var_type(*result, TYPE_UNDEFINED); return;
+                }
+                set_var_value_double(*result, res_val);
             }
             break;
         case TYPE_CHAR:
-            switch(op) {
-                case OP_ADD: set_var_value_char(*result, left->value.var.char_val + right->value.var.char_val); break;
-                case OP_SUB: set_var_value_char(*result, left->value.var.char_val - right->value.var.char_val); break;
-                case OP_MUL: set_var_value_char(*result, left->value.var.char_val * right->value.var.char_val); break;
-                case OP_DIV: 
-                    if (right->value.var.char_val == 0) yyerror("Division by zero");
-                    else set_var_value_char(*result, left->value.var.char_val / right->value.var.char_val);
-                    break;
-            }
+             yyerror("Arithmetic operations on char type not currently supported");
+             set_var_type(*result, TYPE_UNDEFINED); 
             break;
         case TYPE_STRING:
-            // String operations can be handled here
-            // For now, we will just print an error
-            yyerror("String operations not implemented");
+            
+            if (op == OP_ADD) {
+                
+                if (left->type != TYPE_STRING || right->type != TYPE_STRING) {
+                    yyerror("String concatenation with non-string types not yet implemented");
+                    set_var_type(*result, TYPE_UNDEFINED);
+                } else {
+                    char* lstr = left->value.var.string_val ? left->value.var.string_val : "";
+                    char* rstr = right->value.var.string_val ? right->value.var.string_val : "";
+                    size_t total_len = strlen(lstr) + strlen(rstr);
+                    char* new_str = (char*)malloc(total_len + 1);
+                    if (new_str) {
+                        strcpy(new_str, lstr);
+                        strcat(new_str, rstr);
+                        set_var_value_string(*result, new_str); 
+                        free(new_str); 
+                    } else {
+                        yyerror("Memory allocation failed for string concatenation");
+                        set_var_type(*result, TYPE_UNDEFINED);
+                    }
+                }
+            } else {
+                 yyerror("Invalid operation for string type");
+                 set_var_type(*result, TYPE_UNDEFINED);
+            }
             break;
         case TYPE_BOOL:
-            // Boolean operations can be handled here
-            // For now, we will just print an error
-            yyerror("Boolean operations not implemented");
-            break;
-        case TYPE_VOID:
-            // Void operations are not valid
-            yyerror("Void operations not allowed");
-            break;
-        case TYPE_UNDEFINED:
-            // Undefined operations are not valid
-            yyerror("Undefined operations not allowed");
+             yyerror("Arithmetic operations on bool type not supported");
+             set_var_type(*result, TYPE_UNDEFINED);
             break;
         default:
-            yyerror("Invalid type for operation");
+            yyerror("Invalid result type for binary operation");
+            set_var_type(*result, TYPE_UNDEFINED);
     }
+    
 }
 
-int main(void) {
+
+int main(int argc, char *argv[]) {
+
+     int debug_enabled = 0;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--debug") == 0) {
+            debug_enabled = 1;
+        }
+    }
+
     sym_table = NULL;
-    yyparse();
-    print_symbol_table();
-    printf("\n");
+    yylineno = 1; 
+    if(yyparse() == 0) { 
+        printf("Yolo: Parsing Successful.\n");
+    } else {
+        printf("Yolo: Parsing Failed.\n");
+    }
+    if(debug_enabled) {
+        printf("Yolo: debug mode enabled -- to disable it remove '--debug'\n");
+        printf("\n--- Symbol Table ---\n");
+        print_symbol_table();
+        printf("--------------------\n");
+    }
     free_symbol_table();
     return 0;
 }
 
+
 void yyerror(const char *s) {
-    fprintf(stderr, "Error: %s\n", s);
+    fprintf(stderr, "Syntax Error on line %d: %s\n", yylineno, s);
 }

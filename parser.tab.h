@@ -45,7 +45,7 @@
 extern int yydebug;
 #endif
 /* "%code requires" blocks.  */
-#line 21 "parser.y"
+#line 23 "parser.y"
 
     #include "symtab.h"
     #include <stdbool.h>
@@ -108,12 +108,11 @@ extern int yydebug;
     MINUS = 299,                   /* MINUS  */
     MULTIPLY = 300,                /* MULTIPLY  */
     DIVIDE = 301,                  /* DIVIDE  */
-    INC = 302,                     /* INC  */
-    DEC = 303,                     /* DEC  */
-    NOT = 304,                     /* NOT  */
-    POWER = 305,                   /* POWER  */
-    UNARY_MINUS = 306,             /* UNARY_MINUS  */
-    NEG = 307                      /* NEG  */
+    POWER = 302,                   /* POWER  */
+    NOT = 303,                     /* NOT  */
+    UNARY_MINUS = 304,             /* UNARY_MINUS  */
+    INC = 305,                     /* INC  */
+    DEC = 306                      /* DEC  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -122,17 +121,17 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 37 "parser.y"
+#line 40 "parser.y"
 
     int int_val;
     double double_val;
-    char* string_val;
-    char char_val;
+    char* string_val; 
+    char char_val;    
     bool bool_val;
     symrec* sym_ptr;
     data_type type_val;
 
-#line 136 "parser.tab.h"
+#line 135 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

@@ -1,0 +1,4 @@
+x: string = "hello world";
+y: int = 69;
+y = 420;
+print(y);
