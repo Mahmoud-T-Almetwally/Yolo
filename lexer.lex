@@ -23,14 +23,14 @@ char handle_escape(char c) {
         case '"': return '"';
         
         default:
-            
-            
             fprintf(stderr, "Warning line %d: Unknown escape sequence '\\%c'\n", yylineno, c);
             return c; 
     }
 }
 
 %}
+
+%option noyywrap
 
 %x STRING_STATE
 

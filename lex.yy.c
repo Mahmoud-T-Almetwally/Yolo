@@ -322,6 +322,9 @@ void yyfree ( void *  );
 #define YY_AT_BOL() (YY_CURRENT_BUFFER_LVALUE->yy_at_bol)
 
 /* Begin user sect3 */
+
+#define yywrap() (/*CONSTCOND*/1)
+#define YY_SKIP_YYWRAP
 typedef flex_uint8_t YY_CHAR;
 
 FILE *yyin = NULL, *yyout = NULL;
@@ -542,16 +545,14 @@ char handle_escape(char c) {
         case '"': return '"';
         
         default:
-            
-            
             fprintf(stderr, "Warning line %d: Unknown escape sequence '\\%c'\n", yylineno, c);
             return c; 
     }
 }
 
-#line 552 "lex.yy.c"
+#line 553 "lex.yy.c"
 
-#line 554 "lex.yy.c"
+#line 555 "lex.yy.c"
 
 #define INITIAL 0
 #define STRING_STATE 1
@@ -772,7 +773,7 @@ YY_DECL
 #line 37 "lexer.lex"
 
 
-#line 775 "lex.yy.c"
+#line 776 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1198,7 +1199,7 @@ YY_RULE_SETUP
 #line 204 "lexer.lex"
 ECHO;
 	YY_BREAK
-#line 1201 "lex.yy.c"
+#line 1202 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
