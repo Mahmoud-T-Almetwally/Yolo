@@ -1,0 +1,6 @@
+*.o
+*.yy.c
+*.tab.c
+*.tab.h
+*.output
+*.py

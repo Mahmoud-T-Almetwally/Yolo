@@ -1,66 +1,75 @@
 %{
-
-#include "symtab.h"
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-int yylex(void);
-void yyerror(const char *s);
-extern int yylineno;
-
-typedef enum {
-    OP_ADD,
-    OP_SUB,
-    OP_MUL,
-    OP_DIV
-    
-} op_type;
-
-%}
-
-%code requires {
+    #include "parser.tab.h" 
     #include "symtab.h"
+    #include "ast.h"
+    #include "utils.h"
     #include <stdbool.h>
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
+
+    extern int yylineno;
+    AstNode *ast_root = NULL;
+    symrec* current_func_sym_building = NULL;
+
+    void yyerror(YYLTYPE *llocp, void *scanner, const char *s);
+    int yylex(YYSTYPE *yylval, YYLTYPE *yyloc, void *scanner);
+%}
+
+%code requires {
+    #include "types.h" // Enums like data_type, OperatorType
+    #include "symtab.h" // For symrec struct pointer
+    #include "ast.h" // For AstNode struct pointer
+    #include <stdbool.h> // For bool_val
 }
 
 %code {
-    
-    data_type token_type_to_data_type(int token_type);
-    void handle_binop(symrec* left, symrec* right, symrec** result, int op);
-    extern symrec *sym_table;
-    extern int yylineno; 
+    extern SymbolTable *current_scope; 
+    extern int yylineno;
 }
 
-%define parse.error verbose
+%parse-param { void *scanner }
+%lex-param { void *scanner }    
+%define parse.error verbose 
+%define api.pure full
+%locations
+
+%destructor { free_ast($$); } <node_ptr> 
+
 %union {
     int int_val;
     double double_val;
-    char* string_val; 
-    char char_val;    
+    char* string_val;
+    char char_val;
     bool bool_val;
-    symrec* sym_ptr;
-    data_type type_val;
+    symrec* sym_ptr; 
+    data_type type_val; 
+    AstNode* node_ptr; 
+    OperatorType op_val; 
 }
 
-%token FUNC
-%token <string_val> IDENT
-%token <int_val> INTEGER
-%token <double_val> DOUBLE
-%token <char_val> CHAR    
-%token <string_val> STRING 
-%token <bool_val> BOOL
+%token <string_val> IDENT       
+%token <int_val> INTEGER   
+%token <double_val> DOUBLE   
+%token <char_val> CHAR   
+%token <string_val> STRING     
+%token <bool_val> BOOL        
 
-%token T_INTEGER T_FLOAT T_CHAR T_STRING T_DOUBLE T_BOOL T_VOID
+%token FUNC VAR IF ELSE WHILE FOR PRINT RETURN T_FLOAT // T_FLOAT might map to T_DOUBLE
+
+%token <type_val> T_INTEGER T_CHAR T_STRING T_DOUBLE T_BOOL T_VOID
 
 %token LPAREN RPAREN LCURLY RCURLY LBRACKET RBRACKET
 %token DOT SEMICOLON COLON COMMA
 
-%token VAR IF ELSE WHILE FOR PRINT RETURN
+%token <op_val> PLUS MINUS MULTIPLY DIVIDE POWER 
+%token <op_val> EQ NEQ LT GT LTE GTE          
+%token <op_val> AND OR NOT                   
+%token <op_val> ASSIGN                  
+
+// Tokens for potential future use (currently no rules use them)
+%token INC DEC
+
 
 %right ASSIGN
 %left OR
@@ -68,522 +77,370 @@ typedef enum {
 %left EQ NEQ
 %left LT GT LTE GTE
 %left PLUS MINUS
-%left MULTIPLY DIVIDE POWER 
-%left NOT                  
-%right UNARY_MINUS          
-%precedence INC DEC
+%left MULTIPLY DIVIDE
+%right POWER 
+%left NOT    
 
-%type <type_val> type
-%type <sym_ptr> expression literal
-%type <void> program statements statement param params param_list function print_statement declaration_statement 
+%precedence UNARY_MINUS
+// %precedence INC DEC // If used, likely higher than unary minus
+
+
+
+%type <type_val> primitive_type return_type
+%type <node_ptr> program statements statement block func_definition
+%type <node_ptr> declaration_statement assignment_statement if_statement print_statement return_statement
+%type <node_ptr> expression literal
+%type <node_ptr> param_list param 
+%type <node_ptr> arg_list         
+
+%type <sym_ptr> func_signature
 
 %start program
 
 %%
 
 program:
-      %empty {} 
-    | statements {} 
+      /* empty */ { ast_root = create_program_node(NULL); $$ = ast_root; init_scope_management(); }
+    | statements  { ast_root = create_program_node($1); $$ = ast_root; }
     ;
 
-function:
-    FUNC IDENT LPAREN params RPAREN LCURLY statements RCURLY {
-        symrec* func = getsym($2);
-        if (func) {
-             char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Function redefinition '%s'", $2); yyerror(err_msg);
-             free($2);
+statements:
+      /* empty */      { $$ = NULL; } // Base case: no statements
+    | statement statements { // Build a linked list of statements
+                      AstNode* first = $1;
+                      AstNode* rest = $2;
+                      if (first) {
+                          first->next = rest;
+                          $$ = first;
+                      } else {
+                           $$ = rest; // Skip the NULL statement (e.g., ';')
+                      }
+                   }
+    ;
+
+// A block introduces a new scope
+block:
+      LCURLY
+          { enter_scope(NULL); } // Enter new scope before processing statements
+      statements
+      RCURLY
+          { $$ = $3; exit_scope(); } // Statements list is the result; exit scope after processing
+    ;
+
+statement:
+      declaration_statement SEMICOLON { $$ = $1; }
+    | assignment_statement SEMICOLON  { $$ = $1; }
+    | expression SEMICOLON            { $$ = $1; } // Allow expressions as statements (e.g., function calls)
+    | if_statement                    { $$ = $1; } // No semicolon needed after if
+    | print_statement SEMICOLON       { $$ = $1; }
+    | return_statement SEMICOLON      { $$ = $1; }
+    | func_definition                 { $$ = $1; } // No semicolon needed after function def
+    | block                           { $$ = $1; } // No semicolon needed after block
+    | SEMICOLON                       { $$ = NULL; } // Empty statement
+    ;
+
+func_definition:
+    // Parse signature (creates symbol, enters scope, handles params)
+    // Then parse the body block (which uses the function's scope)
+    func_signature block
+    {
+        symrec* func_sym = $1; // Get the function symbol from the signature
+        AstNode* body_node = $2; // Get the statement list from the block
+
+        if (func_sym) {
+            // Associate the parsed body AST with the function symbol
+            set_func_body(func_sym, body_node);
+            // Create the AST node representing the function definition itself
+            $$ = create_func_def_node(func_sym, body_node);
+            if ($$) $$->lineno = @1.first_line; // Set line number from 'FUNC' keyword
         } else {
-            func = putsym($2, SYM_FUNC);
-            set_func_return_type(func, TYPE_VOID);
-            
-            free($2); 
+            // If signature parsing failed, func_sym might be NULL
+            PARSER_ERROR(@1.first_line, "Failed to create function symbol, discarding function body.");
+            free_ast(body_node); // Clean up the orphaned body
+            $$ = NULL;
         }
+        // The scope for the function parameters and body was handled
+        // by func_signature (enter) and block (exit), so no exit_scope here.
+        // The scope *containing* the function definition is exited elsewhere (e.g., end of program/block)
+        current_func_sym_building = NULL; // Clear the global tracker
     }
-    | FUNC IDENT LPAREN params RPAREN COLON type LCURLY statements RCURLY {
-         symrec* func = getsym($2);
-         if (func) {
-             char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Function redefinition '%s'", $2); yyerror(err_msg);
+    ;
+
+func_signature:
+    FUNC IDENT 
+    {
+        if (getsym_in_scope($2, current_scope)) {
+             PARSER_ERROR(@2.first_line, "Function '%s' redefined in the current scope.", $2);
+             free($2); 
+             current_func_sym_building = NULL;
+             YYERROR; 
+        }
+        current_func_sym_building = putsym($2, SYM_FUNC, TYPE_VOID);
+        if (!current_func_sym_building) {
+             PARSER_ERROR(@2.first_line, "Failed to create symbol table entry for function '%s'.", $2);
              free($2);
-         } else {
-            func = putsym($2, SYM_FUNC);
-            set_func_return_type(func, $7);
-            free($2);
-         }
-    }
-    ;
-
-params:
-      %empty {} 
-    | param_list {} 
-    ;
-
-
-param_list:
-      param {} 
-    | param_list COMMA param {} 
-    ;
-
-
-param:
-    IDENT COLON type {
-        symrec* p = putsym($1, SYM_VAR); 
-        if(p) { 
-            set_var_type(p, $3);
-            p->is_constant = true; 
+             YYERROR;
         }
-        free($1); 
-    }
-    | VAR IDENT COLON type { 
-        symrec* p = putsym($2, SYM_VAR);
-        if(p) {
-            set_var_type(p, $4);
-            p->is_constant = false; 
-        }
+        enter_scope($2); 
         free($2); 
     }
+    LPAREN param_list RPAREN return_type // Matched '(params) : retType'
+    {
+        symrec* func_sym = current_func_sym_building;
+        AstNode* param_ast_list = $5;
+        data_type ret_type = $7;
+
+        if (func_sym) {
+            set_symbol_type(func_sym, ret_type);
+
+            AstNode* current_param_node = param_ast_list;
+            while (current_param_node != NULL) {
+                 if (current_param_node->node_type == NODE_VAR_DECL &&
+                     current_param_node->data.declaration.symbol &&
+                     current_param_node->data.declaration.symbol->kind == SYM_PARAM)
+                 {
+                      add_func_param(func_sym, current_param_node->data.declaration.symbol);
+                 } else {
+                      PARSER_ERROR(current_param_node ? current_param_node->lineno : @5.first_line,
+                                   "Internal Error: Expected parameter declaration node, got something else.");
+                 }
+                 current_param_node = current_param_node->next;
+            }
+            // free_ast(param_ast_list); // Maybe not free yet?
+        } else {
+            free_ast(param_ast_list);
+        }
+
+        $$ = func_sym;
+    }
     ;
 
-type:
+return_type:
+      /* empty */         { $$ = TYPE_VOID; } // Default return type
+    | COLON primitive_type { $$ = $2; }      // Explicit return type
+    ;
+
+// Parameter list: a list of parameter declarations
+param_list:
+      /* empty */ { $$ = NULL; }           // No parameters
+    | param       { $$ = $1; $1->next = NULL; } // Single parameter
+    | param COMMA param_list {             // Multiple parameters
+              $1->next = $3; // Link current param to the rest of the list
+              $$ = $1;       // Return the head of the list
+      }
+    ;
+
+// A single parameter declaration (creates symbol and AST node)
+param:
+    // Allow 'var name: type' or just 'name: type' for params
+    IDENT COLON primitive_type {
+        if (!current_func_sym_building) { // Check if we are inside a function signature
+             PARSER_ERROR(@1.first_line, "Parameter '%s' declared outside function signature.", $1);
+             free($1);
+             $$ = NULL; YYERROR;
+        }
+        // Parameters are like local variables within the function's scope
+        symrec* param_sym = putsym($1, SYM_PARAM, $3);
+        if (!param_sym) {
+            PARSER_ERROR(@1.first_line, "Failed to declare parameter '%s' (possibly redefined).", $1);
+            free($1);
+            $$ = NULL; YYERROR;
+        }
+        free($1); // Free identifier string
+        // Create a VAR_DECL node for the parameter (helps structure/consistency)
+        $$ = create_decl_node(NODE_VAR_DECL, param_sym, NULL);
+         if ($$) $$->lineno = @1.first_line;
+         // Mark param as initialized implicitly upon function call
+         mark_symbol_initialized(param_sym);
+    }
+    | VAR IDENT COLON primitive_type { // Optional 'var' keyword for params
+         if (!current_func_sym_building) {
+             PARSER_ERROR(@2.first_line, "Parameter '%s' declared outside function signature.", $2);
+             free($2);
+             $$ = NULL; YYERROR;
+         }
+        symrec* param_sym = putsym($2, SYM_PARAM, $4);
+         if (!param_sym) {
+            PARSER_ERROR(@2.first_line, "Failed to declare parameter '%s' (possibly redefined).", $2);
+            free($2);
+            $$ = NULL; YYERROR;
+        }
+        free($2); // Free identifier string
+        $$ = create_decl_node(NODE_VAR_DECL, param_sym, NULL);
+         if ($$) $$->lineno = @2.first_line;
+         mark_symbol_initialized(param_sym);
+    }
+    ;
+
+primitive_type:
       T_INTEGER { $$ = TYPE_INT; }
     | T_DOUBLE  { $$ = TYPE_DOUBLE; }
+    | T_FLOAT   { $$ = TYPE_DOUBLE; } // Treat float as double
     | T_CHAR    { $$ = TYPE_CHAR; }
     | T_STRING  { $$ = TYPE_STRING; }
     | T_BOOL    { $$ = TYPE_BOOL; }
-    | T_VOID    { $$ = TYPE_VOID; }
-    
+    | T_VOID    { $$ = TYPE_VOID; } // Only valid as return type
     ;
 
+declaration_statement:
+    // Constant declaration: name : type = expr; (Implicitly const)
+    IDENT COLON primitive_type ASSIGN expression {
+            symrec* sym = putsym($1, SYM_VAR, $3);
+            if (!sym) {
+                 PARSER_ERROR(@1.first_line, "Failed to declare constant '%s' (possibly redefined).", $1);
+                 free($1); free_ast($5); $$ = NULL; YYERROR;
+            }
+            set_symbol_const(sym, true); // Mark as constant
+            $$ = create_decl_node(NODE_CONST_DECL, sym, $5); // Use CONST_DECL node type
+            if ($$) $$->lineno = @1.first_line;
+             // Initialization happens via the assignment, mark in semantic pass? Or here?
+             // Let's mark here for simplicity, semantic pass can verify type.
+             mark_symbol_initialized(sym);
+            free($1); // Free identifier string
+    }
+    // Variable declaration with initialization: var name : type = expr;
+    | VAR IDENT COLON primitive_type ASSIGN expression {
+            symrec* sym = putsym($2, SYM_VAR, $4);
+             if (!sym) {
+                 PARSER_ERROR(@2.first_line, "Failed to declare variable '%s' (possibly redefined).", $2);
+                 free($2); free_ast($6); $$ = NULL; YYERROR;
+            }
+            // Default is not constant (is_constant = false)
+            $$ = create_decl_node(NODE_VAR_DECL, sym, $6);
+            if ($$) $$->lineno = @1.first_line;
+             mark_symbol_initialized(sym);
+            free($2); // Free identifier string
+    }
+    // Variable declaration without initialization: var name : type;
+    | VAR IDENT COLON primitive_type {
+            symrec* sym = putsym($2, SYM_VAR, $4);
+             if (!sym) {
+                 PARSER_ERROR(@2.first_line, "Failed to declare variable '%s' (possibly redefined).", $2);
+                 free($2); $$ = NULL; YYERROR;
+            }
+            // is_initialized remains false
+            $$ = create_decl_node(NODE_VAR_DECL, sym, NULL); // No initializer expression
+            if ($$) $$->lineno = @1.first_line;
+            free($2); // Free identifier string
+    }
+    ;
+
+assignment_statement:
+    // Simple assignment: name = expr;
+    IDENT ASSIGN expression {
+        // Lookup the symbol for the identifier
+        symrec* sym = getsym($1);
+        if (!sym) {
+            // Undeclared variable error - Semantic analysis should catch this primarily
+            // But we can report early here too.
+            PARSER_ERROR(@1.first_line, "Assignment to undeclared identifier '%s'.", $1);
+            free($1); free_ast($3); $$ = NULL; YYERROR;
+        }
+        // Create an identifier expression node for the LHS
+        AstNode* ident_node = create_ident_node(sym);
+        if (ident_node) ident_node->lineno = @1.first_line;
+
+        // Create the assignment statement node
+        $$ = create_assign_node(ident_node, $3);
+         if ($$) $$->lineno = @1.first_line; // Or maybe @2.first_line for '=' ?
+         // Semantic analysis will check if 'sym' is constant and if types match.
+         // Mark symbol as initialized after assignment (if not already).
+         // This might be better done in semantic analysis after type checks pass.
+         // mark_symbol_initialized(sym); // Maybe defer this
+
+        free($1); // Free identifier string
+    }
+    // Could add more complex assignments later (e.g., array[index] = expr)
+    ;
+
+if_statement:
+    IF LPAREN expression RPAREN statement // Mandatory 'then' branch (can be a block)
+       { $$ = create_if_node($3, $5, NULL); if($$) $$->lineno = @1.first_line; } // No else
+    | IF LPAREN expression RPAREN statement ELSE statement // With 'else' branch
+       { $$ = create_if_node($3, $5, $7); if($$) $$->lineno = @1.first_line; }
+    // Note: 'statement' can be a 'block' due to statement rules
+    ;
+
+print_statement:
+    // Allow print() or print(expr)
+    PRINT LPAREN RPAREN { $$ = create_print_node(NULL); if($$) $$->lineno = @1.first_line; }
+    | PRINT LPAREN expression RPAREN { $$ = create_print_node($3); if($$) $$->lineno = @1.first_line; }
+    ;
+
+return_statement:
+    RETURN expression { $$ = create_return_node($2); if($$) $$->lineno = @1.first_line; }
+    | RETURN           { $$ = create_return_node(NULL); if($$) $$->lineno = @1.first_line; } // Return void
+    ;
 
 literal:
-    INTEGER {
-        $$ = putsym("_literal_int", SYM_VAR);
-        if($$) { 
-             set_var_type($$, TYPE_INT);
-             set_var_value_int($$, $1);
-             $$->is_constant = true; 
-        }
-    }
-    | DOUBLE {
-        $$ = putsym("_literal_double", SYM_VAR);
-        if($$) {
-            set_var_type($$, TYPE_DOUBLE);
-            set_var_value_double($$, $1);
-            $$->is_constant = true;
-        }
-    }
-    | CHAR { 
-        $$ = putsym("_literal_char", SYM_VAR);
-        if($$) {
-            set_var_type($$, TYPE_CHAR);
-            set_var_value_char($$, $1);
-            $$->is_constant = true;
-        }
-    }
-    | STRING { 
-        $$ = putsym("_literal_string", SYM_VAR);
-        if ($$) {
-            set_var_type($$, TYPE_STRING);
-            
-            set_var_value_string($$, $1);
-            $$->is_constant = true;
-        }
-        free($1); 
-    }
-    | BOOL { 
-        $$ = putsym("_literal_bool", SYM_VAR);
-        if ($$) {
-            set_var_type($$, TYPE_BOOL);
-            set_var_value_bool($$, $1);
-            $$->is_constant = true;
-        }
-    }
+      INTEGER { $$ = create_int_node($1); if($$) $$->lineno = @1.first_line; }
+    | DOUBLE  { $$ = create_double_node($1); if($$) $$->lineno = @1.first_line;}
+    | CHAR    { $$ = create_char_node($1); if($$) $$->lineno = @1.first_line;}
+    | STRING  { $$ = create_string_node($1); free($1); if($$) $$->lineno = @1.first_line;} // Free lexer string after copying
+    | BOOL    { $$ = create_bool_node($1); if($$) $$->lineno = @1.first_line;} // Need BOOL token from lexer
+    // Add TRUE/FALSE tokens later maybe
+    ;
+
+// Argument list for function calls: a linked list of expressions
+arg_list:
+    /* empty */             { $$ = NULL; }
+    | expression            { $$ = $1; $1->next = NULL; } // Single argument
+    | expression COMMA arg_list { // Multiple arguments
+          $1->next = $3; // Link current argument expression to the rest
+          $$ = $1;       // Return the head of the list
+      }
     ;
 
 
 expression:
-      literal 
-    
-    | IDENT ASSIGN expression {
-        $$ = getsym($1);
-        if (!$$) {
-            char err_msg[256];
-            snprintf(err_msg, sizeof(err_msg), "Assignment to undeclared identifier '%s'", $1);
-            yyerror(err_msg);
-             $$ = putsym($1, SYM_VAR); 
-             if($$) set_var_type($$, TYPE_UNDEFINED); 
-             else $$ = NULL; 
-        } else if ($$->kind != SYM_VAR) {
-            char err_msg[256];
-            snprintf(err_msg, sizeof(err_msg), "Assignment target '%s' is not a variable", $1);
-            yyerror(err_msg);
-        } else if ($$->is_constant) {
-            char err_msg[256];
-            snprintf(err_msg, sizeof(err_msg), "Assignment to constant variable '%s'", $1);
-            yyerror(err_msg);
-        } else if (!$3 || $3->type == TYPE_UNDEFINED) { 
-            char err_msg[256];
-            snprintf(err_msg, sizeof(err_msg), "Cannot assign undefined value to '%s'", $1);
-            yyerror(err_msg);
-        } else if ($3->type != $$->type) {
-            
-            char err_msg[256];
-            
-            snprintf(err_msg, sizeof(err_msg), "Type mismatch in assignment to '%s' (expected %d, got %d)", $1, $$->type, $3->type);
-            yyerror(err_msg);
-        } else {
-            switch ($$->type) {
-                case TYPE_INT: set_var_value_int($$, $3->value.var.int_val); break;
-                case TYPE_DOUBLE: set_var_value_double($$, $3->value.var.double_val); break;
-                case TYPE_CHAR: set_var_value_char($$, $3->value.var.char_val); break;
-                case TYPE_STRING:
-                    
-                    if ($$->value.var.string_val) free($$->value.var.string_val);
-                     
-                    set_var_value_string($$, $3->value.var.string_val ? $3->value.var.string_val : "");
-                    break;
-                case TYPE_BOOL: set_var_value_bool($$, $3->value.var.bool_val); break;
-                default: yyerror("Unhandled type in assignment"); break;
-             }
-        }
-        free($1); 
-        
-    }
-    | IDENT { 
-        $$ = getsym($1);
-        if (!$$) {
-            char err_msg[256];
-            snprintf(err_msg, sizeof(err_msg), "Undefined identifier '%s'", $1);
-            yyerror(err_msg);
-             $$ = putsym($1, SYM_VAR); 
-             if($$) set_var_type($$, TYPE_UNDEFINED);
-             else $$ = NULL; 
-        } else if ($$->kind != SYM_VAR) { 
-             char err_msg[256];
-             snprintf(err_msg, sizeof(err_msg), "'%s' is not a variable", $1);
-             yyerror(err_msg);
-             
-             
-             if($$) set_var_type($$, TYPE_UNDEFINED); 
-        }
-        free($1); 
-    }
-    
-    | LPAREN expression RPAREN { $$ = $2; }
-    
-    | expression PLUS expression  { handle_binop($1, $3, &$$, OP_ADD); }
-    | expression MINUS expression { handle_binop($1, $3, &$$, OP_SUB); }
-    | expression MULTIPLY expression { handle_binop($1, $3, &$$, OP_MUL); }
-    | expression DIVIDE expression { handle_binop($1, $3, &$$, OP_DIV); }
-    | MINUS expression %prec UNARY_MINUS { 
-        if (!$2 || $2->type == TYPE_UNDEFINED) {
-            yyerror("Cannot negate undefined value");
-            $$ = putsym("_temp_error", SYM_VAR); 
-            if($$) set_var_type($$, TYPE_UNDEFINED); else $$ = NULL;
-        } else if ($2->type == TYPE_INT) {
-            $$ = putsym("_temp_neg_int", SYM_VAR);
-            if($$) {
-                 set_var_type($$, TYPE_INT);
-                 set_var_value_int($$, -$2->value.var.int_val);
-                 $$->is_constant = $2->is_constant; 
-            }
-        } else if ($2->type == TYPE_DOUBLE) {
-            $$ = putsym("_temp_neg_double", SYM_VAR);
-             if($$) {
-                 set_var_type($$, TYPE_DOUBLE);
-                 set_var_value_double($$, -$2->value.var.double_val);
-                 $$->is_constant = $2->is_constant;
-             }
-        } else {
-            char err_msg[100]; snprintf(err_msg, sizeof(err_msg), "Invalid type (%d) for negation", $2->type); yyerror(err_msg);
-            $$ = putsym("_temp_error", SYM_VAR); 
-            if($$) set_var_type($$, TYPE_UNDEFINED); else $$ = NULL;
-        }
-        
-    }
-    | NOT expression { 
-         yyerror("NOT operator not yet implemented");
-         $$ = putsym("_temp_error", SYM_VAR);
-         if($$) set_var_type($$, TYPE_UNDEFINED); else $$ = NULL;
-    }
-    ;
-
-statements:
-      %empty {} 
-    | statements statement {} 
-    ;
-
-statement:
-      expression SEMICOLON {
-          if ($1 && (strncmp($1->name, "_literal", 8) == 0 || strncmp($1->name, "_temp", 5) == 0)) { 
-              
+      literal { $$ = $1; } // Literals are expressions
+    | IDENT   { // Identifier used in an expression (variable lookup)
+          symrec* sym = getsym($1);
+          if (!sym) {
+               PARSER_ERROR(@1.first_line, "Undeclared identifier '%s' used in expression.", $1);
+               free($1); $$ = NULL; YYERROR;
           }
+          // Create identifier expression node, semantic analysis checks initialization/type
+          $$ = create_ident_node(sym);
+          if ($$) $$->lineno = @1.first_line;
+          free($1); // Free identifier string
       }
-    | function 
-    | declaration_statement SEMICOLON 
-    | print_statement
-    | LCURLY statements RCURLY {} 
-    
-    ;
-
-
-declaration_statement:
-    
-      IDENT COLON type ASSIGN expression {
-        symrec* existing = getsym($1);
-        if (existing) {
-            
-            char err_msg[256];
-            snprintf(err_msg, sizeof(err_msg), "Redeclaration of '%s'", $1);
-            yyerror(err_msg);
-        } else if (!$5 || $5->type == TYPE_UNDEFINED) {
-             char err_msg[256];
-             snprintf(err_msg, sizeof(err_msg), "Cannot initialize constant '%s' with undefined value", $1);
-             yyerror(err_msg);
-             
-             symrec* sym = putsym($1, SYM_VAR);
-             if(sym) { set_var_type(sym, $3); sym->is_constant = true; }
-        } else if ($5->type != $3) {
-             
-            char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Type mismatch in constant '%s' initialization (expected %d, got %d)", $1, $3, $5->type); yyerror(err_msg);
-             symrec* sym = putsym($1, SYM_VAR);
-             if(sym) { set_var_type(sym, $3); sym->is_constant = true; }
-        } else {
-            symrec* sym = putsym($1, SYM_VAR);
-            if(sym) {
-                set_var_type(sym, $3);
-                sym->is_constant = true; 
-                switch (sym->type) { 
-                    case TYPE_INT: set_var_value_int(sym, $5->value.var.int_val); break;
-                    case TYPE_DOUBLE: set_var_value_double(sym, $5->value.var.double_val); break;
-                    case TYPE_CHAR: set_var_value_char(sym, $5->value.var.char_val); break;
-                    case TYPE_STRING: set_var_value_string(sym, $5->value.var.string_val ? $5->value.var.string_val : ""); break;
-                    case TYPE_BOOL: set_var_value_bool(sym, $5->value.var.bool_val); break;
-                    default: yyerror("Unhandled type in const initialization"); break;
-                 }
-            }
-        }
-        free($1); 
-        
-    }
-    
-    | VAR IDENT COLON type ASSIGN expression {
-        symrec* existing = getsym($2);
-         if (existing) {
-            char err_msg[256];
-            snprintf(err_msg, sizeof(err_msg), "Redeclaration of '%s'", $2);
-            yyerror(err_msg);
-         } else if (!$6 || $6->type == TYPE_UNDEFINED) {
-             char err_msg[256];
-             snprintf(err_msg, sizeof(err_msg), "Cannot initialize variable '%s' with undefined value", $2);
-             yyerror(err_msg);
-             symrec* sym = putsym($2, SYM_VAR);
-             if(sym) { set_var_type(sym, $4); sym->is_constant = false; } 
-         } else if ($6->type != $4) {
-            char err_msg[256]; snprintf(err_msg, sizeof(err_msg), "Type mismatch in variable '%s' initialization (expected %d, got %d)", $2, $4, $6->type); yyerror(err_msg);
-             symrec* sym = putsym($2, SYM_VAR);
-             if(sym) { set_var_type(sym, $4); sym->is_constant = false; }
-         } else {
-            symrec* sym = putsym($2, SYM_VAR);
-            if(sym) {
-                set_var_type(sym, $4);
-                sym->is_constant = false; 
-                switch (sym->type) { 
-                    case TYPE_INT: set_var_value_int(sym, $6->value.var.int_val); break;
-                    case TYPE_DOUBLE: set_var_value_double(sym, $6->value.var.double_val); break;
-                    case TYPE_CHAR: set_var_value_char(sym, $6->value.var.char_val); break;
-                    case TYPE_STRING: set_var_value_string(sym, $6->value.var.string_val ? $6->value.var.string_val : ""); break;
-                    case TYPE_BOOL: set_var_value_bool(sym, $6->value.var.bool_val); break;
-                    default: yyerror("Unhandled type in var initialization"); break;
-                 }
-            }
-        }
-        free($2); 
-        
-    }
-    ;
-
-print_statement:
-    PRINT LPAREN expression RPAREN SEMICOLON {
-        if (!$3 || $3->type == TYPE_UNDEFINED) {
-             yyerror("Cannot print undefined value");
-        } else {
-            switch($3->type) {
-                case TYPE_INT: printf("%d\n", $3->value.var.int_val); break;
-                case TYPE_DOUBLE: printf("%f\n", $3->value.var.double_val); break;
-                case TYPE_CHAR: printf("%c\n", $3->value.var.char_val); break;
-                
-                case TYPE_STRING: printf("%s\n", $3->value.var.string_val ? $3->value.var.string_val : "(null)"); break;
-                case TYPE_BOOL: printf("%s\n", $3->value.var.bool_val ? "true" : "false"); break;
-                case TYPE_VOID: yyerror("Cannot print void value"); break; 
-                default: yyerror("Invalid type for print"); 
-            }
-        }
-        
+    // Binary Operators
+    | expression PLUS expression     { $$ = create_binop_node(OP_PLUS, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression MINUS expression    { $$ = create_binop_node(OP_MINUS, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression MULTIPLY expression { $$ = create_binop_node(OP_MUL, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression DIVIDE expression   { $$ = create_binop_node(OP_DIV, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression POWER expression    { $$ = create_binop_node(OP_POWER, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression EQ expression       { $$ = create_binop_node(OP_EQ, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression NEQ expression      { $$ = create_binop_node(OP_NEQ, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression LT expression       { $$ = create_binop_node(OP_LT, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression GT expression       { $$ = create_binop_node(OP_GT, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression LTE expression      { $$ = create_binop_node(OP_LTE, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression GTE expression      { $$ = create_binop_node(OP_GTE, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression AND expression      { $$ = create_binop_node(OP_AND, $1, $3); if($$) $$->lineno = @1.first_line;}
+    | expression OR expression       { $$ = create_binop_node(OP_OR, $1, $3); if($$) $$->lineno = @1.first_line;}
+    // Unary Operators
+    | MINUS expression %prec UNARY_MINUS { $$ = create_unop_node(OP_NEGATE, $2); if($$) $$->lineno = @1.first_line;}
+    | NOT expression                 { $$ = create_unop_node(OP_NOT, $2); if($$) $$->lineno = @1.first_line;}
+    // Parenthesized expression
+    | LPAREN expression RPAREN       { $$ = $2; /* Just pass the inner expression's node */ }
+    // Function Call: funcName ( arg_list )
+    | IDENT LPAREN arg_list RPAREN {
+         // Find the function symbol
+         symrec* func_sym = getsym($1);
+         if (!func_sym) {
+              PARSER_ERROR(@1.first_line, "Call to undeclared function '%s'.", $1);
+              free($1); free_ast($3); $$ = NULL; YYERROR;
+         }
+         // Semantic analysis will check if it *is* a function and if args match.
+         $$ = create_func_call_node(func_sym, $3); // $3 is the head of the arg expression list
+         if ($$) $$->lineno = @1.first_line;
+         free($1); 
     }
     ;
 
 %%
-
-
-
-data_type token_type_to_data_type(int token_type) {
-    switch(token_type) {
-        case T_INTEGER: return TYPE_INT;
-        case T_DOUBLE: return TYPE_DOUBLE;
-        case T_CHAR: return TYPE_CHAR;
-        case T_STRING: return TYPE_STRING;
-        case T_BOOL: return TYPE_BOOL;
-        case T_VOID: return TYPE_VOID;
-        
-        default: return TYPE_UNDEFINED;
-    }
-}
-
-
-void handle_binop(symrec* left, symrec* right, symrec** result, int op) {
-    
-    if (!left || left->type == TYPE_UNDEFINED || !right || right->type == TYPE_UNDEFINED) {
-        yyerror("Operand undefined in binary operation");
-        *result = putsym("_temp_error", SYM_VAR);
-        if(*result) set_var_type(*result, TYPE_UNDEFINED); else *result = NULL;
-        return;
-    }
-    
-    bool string_concat = (op == OP_ADD && (left->type == TYPE_STRING || right->type == TYPE_STRING));
-
-    if (!string_concat && left->type != right->type) {
-        
-        if ((left->type == TYPE_INT && right->type == TYPE_DOUBLE) ||
-            (left->type == TYPE_DOUBLE && right->type == TYPE_INT)) {
-             yyerror("Implicit type promotion (int/double) not yet implemented");
-             *result = putsym("_temp_error", SYM_VAR);
-             if(*result) set_var_type(*result, TYPE_UNDEFINED); else *result = NULL;
-             return;
-        } else {
-             
-             char err_msg[100]; snprintf(err_msg, sizeof(err_msg), "Type mismatch in binary operation (%d %d)", left->type, right->type); yyerror(err_msg);
-            *result = putsym("_temp_error", SYM_VAR);
-             if(*result) set_var_type(*result, TYPE_UNDEFINED); else *result = NULL;
-            return;
-        }
-    }
-    
-    *result = putsym("_temp_binop", SYM_VAR); 
-    if (!*result) { yyerror("Memory allocation failed for temporary result"); return; } 
-
-    data_type result_type = left->type; 
-    if (string_concat) result_type = TYPE_STRING; 
-
-    set_var_type(*result, result_type);
-    (*result)->is_constant = left->is_constant && right->is_constant; 
-
-    switch(result_type) { 
-        case TYPE_INT:
-            {
-                int lval = left->value.var.int_val; 
-                int rval = right->value.var.int_val;
-                int res_val;
-                switch(op) {
-                    case OP_ADD: res_val = lval + rval; break;
-                    case OP_SUB: res_val = lval - rval; break;
-                    case OP_MUL: res_val = lval * rval; break;
-                    case OP_DIV:
-                        if (rval == 0) { yyerror("Integer division by zero"); set_var_type(*result, TYPE_UNDEFINED); return; }
-                        res_val = lval / rval; break;
-                    default: yyerror("Unknown integer operation"); set_var_type(*result, TYPE_UNDEFINED); return;
-                }
-                set_var_value_int(*result, res_val);
-            }
-            break;
-        case TYPE_DOUBLE:
-             {
-                
-                double lval = (left->type == TYPE_DOUBLE) ? left->value.var.double_val : (double)left->value.var.int_val;
-                double rval = (right->type == TYPE_DOUBLE) ? right->value.var.double_val : (double)right->value.var.int_val;
-                double res_val;
-                switch(op) {
-                    case OP_ADD: res_val = lval + rval; break;
-                    case OP_SUB: res_val = lval - rval; break;
-                    case OP_MUL: res_val = lval * rval; break;
-                    case OP_DIV:
-                        if (rval == 0.0) { yyerror("Floating point division by zero"); set_var_type(*result, TYPE_UNDEFINED); return; }
-                        res_val = lval / rval; break;
-                    default: yyerror("Unknown double operation"); set_var_type(*result, TYPE_UNDEFINED); return;
-                }
-                set_var_value_double(*result, res_val);
-            }
-            break;
-        case TYPE_CHAR:
-             yyerror("Arithmetic operations on char type not currently supported");
-             set_var_type(*result, TYPE_UNDEFINED); 
-            break;
-        case TYPE_STRING:
-            
-            if (op == OP_ADD) {
-                
-                if (left->type != TYPE_STRING || right->type != TYPE_STRING) {
-                    yyerror("String concatenation with non-string types not yet implemented");
-                    set_var_type(*result, TYPE_UNDEFINED);
-                } else {
-                    char* lstr = left->value.var.string_val ? left->value.var.string_val : "";
-                    char* rstr = right->value.var.string_val ? right->value.var.string_val : "";
-                    size_t total_len = strlen(lstr) + strlen(rstr);
-                    char* new_str = (char*)malloc(total_len + 1);
-                    if (new_str) {
-                        strcpy(new_str, lstr);
-                        strcat(new_str, rstr);
-                        set_var_value_string(*result, new_str); 
-                        free(new_str); 
-                    } else {
-                        yyerror("Memory allocation failed for string concatenation");
-                        set_var_type(*result, TYPE_UNDEFINED);
-                    }
-                }
-            } else {
-                 yyerror("Invalid operation for string type");
-                 set_var_type(*result, TYPE_UNDEFINED);
-            }
-            break;
-        case TYPE_BOOL:
-             yyerror("Arithmetic operations on bool type not supported");
-             set_var_type(*result, TYPE_UNDEFINED);
-            break;
-        default:
-            yyerror("Invalid result type for binary operation");
-            set_var_type(*result, TYPE_UNDEFINED);
-    }
-    
-}
-
-
-int main(int argc, char *argv[]) {
-
-     int debug_enabled = 0;
-
-    for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--debug") == 0) {
-            debug_enabled = 1;
-        }
-    }
-
-    sym_table = NULL;
-    yylineno = 1; 
-    if(yyparse() == 0) { 
-        printf("Yolo: Parsing Successful.\n");
-    } else {
-        printf("Yolo: Parsing Failed.\n");
-    }
-    if(debug_enabled) {
-        printf("Yolo: debug mode enabled -- to disable it remove '--debug'\n");
-        printf("\n--- Symbol Table ---\n");
-        print_symbol_table();
-        printf("--------------------\n");
-    }
-    free_symbol_table();
-    return 0;
-}
-
-
-void yyerror(const char *s) {
-    fprintf(stderr, "Syntax Error on line %d: %s\n", yylineno, s);
-}
+void yyerror(YYLTYPE *llocp, void *scanner, const char *s) {
+    int lineno = llocp ? llocp->first_line : 0; 
+    compiler_error(lineno, "Syntax Error: %s", s);
+} 

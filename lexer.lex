@@ -1,19 +1,24 @@
+%option noyywrap nounput noinput 
+%option bison-bridge bison-locations
+%option reentrant
+%option extra-type="void*"
+
 %{
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "parser.tab.h" 
+#include "parser.tab.h"
+#include "utils.h" 
 
 #define MAX_STR_CONST 1024
+#define YY_DECL int yylex(YYSTYPE* yylval_param, YYLTYPE* yylloc_param, void* yyscanner)
 char string_buf[MAX_STR_CONST]; 
 char *string_buf_ptr;
 
+int yyget_lineno(void* scanner);
+void yyset_lineno(int line_number, void* scanner);
 
-void yyerror(const char *s);
-extern int yylineno; 
-
-
-char handle_escape(char c) {
+char handle_escape(char c, void* scanner) {
     switch (c) {
         case 'n': return '\n';
         case 't': return '\t';
@@ -23,14 +28,13 @@ char handle_escape(char c) {
         case '"': return '"';
         
         default:
-            fprintf(stderr, "Warning line %d: Unknown escape sequence '\\%c'\n", yylineno, c);
+            compiler_warning(yyget_lineno(scanner), "Unknown escape sequence '\\%c'", c);
             return c; 
     }
 }
 
 %}
 
-%option noyywrap
 
 %x STRING_STATE
 
@@ -54,8 +58,8 @@ char handle_escape(char c) {
     "bool"            { return T_BOOL; }
     "void"            { return T_VOID; }
 
-    [0-9]+            { yylval.int_val = atoi(yytext); return INTEGER; }
-    [0-9]+"."[0-9]+   { yylval.double_val = atof(yytext); return DOUBLE; }
+    [0-9]+            { yylval_param->int_val = atoi(yytext); return INTEGER; }
+    [0-9]+"."[0-9]+   { yylval_param->double_val = atof(yytext); return DOUBLE; }
 
     
     
@@ -63,26 +67,27 @@ char handle_escape(char c) {
         if (yytext[1] == '\\') {
             
             if (yyleng == 4) { 
-                 yylval.char_val = handle_escape(yytext[2]);
+                yylval_param->char_val = handle_escape(yytext[2], yyscanner);
             } else {
                  
-                 yyerror("Invalid escape sequence in character literal");
-                 yylval.char_val = '?'; 
+                compiler_error(yyget_lineno(yyscanner),"Invalid escape sequence in character literal");
+                yylval_param->char_val = '?'; 
             }
         } else {
             
             if (yyleng == 3) { 
-                yylval.char_val = yytext[1];
+                yylval_param->char_val = yytext[1];
             } else {
-                 yyerror("Invalid character literal");
-                 yylval.char_val = '?'; 
+                compiler_error(yyget_lineno(yyscanner), "Multi-character literal '%s'", yytext);
+                yylval_param->char_val = '?';
             }
         }
         
         return CHAR;
     }
     
-     \' { yyerror("Invalid or unterminated character literal"); }
+    \'[^\'\n]*\n { compiler_error(yyget_lineno(yyscanner)-1, "Unterminated character literal"); /* Error occurred on previous line */ BEGIN(INITIAL); }
+    \' { compiler_error(yyget_lineno(yyscanner), "Empty or invalid character literal"); }
 
     
     \" {
@@ -92,12 +97,13 @@ char handle_escape(char c) {
             *string_buf_ptr = '\0'; 
              BEGIN(STRING_STATE);         
         } else {
-             yyerror("String constant buffer overflow at start");
+            
+            compiler_error(yyget_lineno(yyscanner), "String constant buffer overflow at start");
              
         }
     }
 
-    [a-zA-Z_][a-zA-Z0-9_]*  { yylval.string_val = strdup(yytext); return IDENT; }
+    [a-zA-Z_][a-zA-Z0-9_]*  { yylval_param->string_val = strdup(yytext); return IDENT; }
 
     ";"               { return SEMICOLON; }
     ":"               { return COLON; }
@@ -132,8 +138,8 @@ char handle_escape(char c) {
     "!"               { return NOT; }   
 
     [ \t]+            { /* Ignore whitespace except newline */ }
-    \n                { yylineno++; /* Track line numbers */ }
-    .                 { char err_msg[100]; sprintf(err_msg, "Unknown character '%c'", *yytext); yyerror(err_msg); } 
+    \n                {  }
+    .                 { compiler_error(yyget_lineno(yyscanner), "Unknown character '%c'", *yytext); } 
 }
 
 
@@ -143,29 +149,32 @@ char handle_escape(char c) {
         BEGIN(INITIAL); 
         *string_buf_ptr = '\0'; 
         
-        yylval.string_val = strdup(string_buf);
+        yylval_param->string_val = strdup(string_buf);
         return STRING;
     }
 
     
     \\.? { 
-        if (yyleng < 2) { 
-             yyerror("Incomplete escape sequence in string literal");
+        if (yyleng < 2) {
+
+             compiler_error(yyget_lineno(yyscanner), "Incomplete escape sequence in string literal");
              
              if (string_buf_ptr < string_buf + MAX_STR_CONST - 1) {
                 *string_buf_ptr++ = '\\';
                 *string_buf_ptr = '\0'; 
              } else {
-                  
+
+                compiler_error(yyget_lineno(yyscanner), "String constant buffer overflow before escape sequence");
+
              }
         } else {
-            char escaped_char = handle_escape(yytext[1]);
+            char escaped_char = handle_escape(yytext[1], yyscanner);
             if (string_buf_ptr < string_buf + MAX_STR_CONST - 1) {
                 *string_buf_ptr++ = escaped_char;
                 *string_buf_ptr = '\0'; 
             } else {
                  
-                 yyerror("String constant buffer overflow during escape sequence processing");
+                compiler_error(yyget_lineno(yyscanner), "String constant buffer overflow during escape sequence processing");
                  
             }
         }
@@ -173,29 +182,29 @@ char handle_escape(char c) {
 
     
     \n {
-        yyerror("Newline in string constant not allowed");
-        yylineno++;   
+        compiler_error(yyget_lineno(yyscanner)-1, "Newline in string constant not allowed");
+        BEGIN(INITIAL);   
     }
     
     [^\\\"\n]+ {
         char *yptr = yytext;
         while (*yptr) {
-             if (string_buf_ptr < string_buf + MAX_STR_CONST - 1) {
-                 *string_buf_ptr++ = *yptr++;
-             } else {
-                 yyerror("String constant buffer overflow");
-                 
-                 *string_buf_ptr = '\0'; 
-                 
-                 
-                 break; 
-             }
+            if (string_buf_ptr < string_buf + MAX_STR_CONST - 1) {
+                *string_buf_ptr++ = *yptr++;
+            } else {
+                compiler_error(yyget_lineno(yyscanner), "String constant buffer overflow");
+                    
+                *string_buf_ptr = '\0'; 
+                
+                
+                break; 
+            }  
         }
         *string_buf_ptr = '\0'; 
     }
     
     <<EOF>> {
-        yyerror("Unterminated string literal at end of file");
+        compiler_error(yyget_lineno(yyscanner), "Unterminated string literal at end of file");
         BEGIN(INITIAL); 
         return YY_NULL; 
     }
