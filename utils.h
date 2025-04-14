@@ -11,6 +11,7 @@
 const char* data_type_to_string(data_type t);
 const char* operator_to_string(OperatorType op);
 const char* sym_kind_to_string(sym_kind k);
+const char* node_type_to_string_parser(NodeType type);
 
 // --- Error Reporting ---
 // Use lineno = 0 if line number is not applicable/available

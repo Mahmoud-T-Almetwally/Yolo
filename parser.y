@@ -34,7 +34,14 @@
 %define api.pure full
 %locations
 
-%destructor { free_ast($$); } <node_ptr> 
+%destructor {
+    if ($$ != ast_root) {
+       printf("DEBUG: Destructor freeing node %p (type %d)\n", $$, $$ ? $$->node_type : -1);
+       free_ast($$);
+    } else {
+       printf("DEBUG: Destructor skipping free for ast_root %p\n", $$);
+    }
+} <node_ptr>
 
 %union {
     int int_val;
@@ -87,7 +94,7 @@
 
 
 %type <type_val> primitive_type return_type
-%type <node_ptr> program statements statement block func_definition
+%type <node_ptr> statements statement block func_definition
 %type <node_ptr> declaration_statement assignment_statement if_statement print_statement return_statement
 %type <node_ptr> expression literal
 %type <node_ptr> param_list param 
@@ -100,25 +107,59 @@
 %%
 
 program:
-      /* empty */ { ast_root = create_program_node(NULL); $$ = ast_root; init_scope_management(); }
-    | statements  { ast_root = create_program_node($1); $$ = ast_root; }
+      /* empty */ {
+                    printf("Parser Action: program: <empty> matched.\n");
+                    ast_root = create_program_node(NULL);
+                    init_scope_management();
+                    printf("Parser Action: <empty> created program node %p, assigned to ast_root.\n", ast_root);
+                    // DO NOT assign to $$
+                  }
+    | statements  {
+                    printf("Parser Action: program: statements matched.\n");
+                    AstNode* statement_list = $1; // $1 still has type <node_ptr>
+                    printf("Parser Action: $1 (statements result) = %p\n", statement_list);
+
+                    // ... (optional debug prints for $1) ...
+
+                    // Create the program node using the statement list
+                    AstNode* new_program_node = create_program_node(statement_list);
+                    printf("Parser Action: create_program_node(%p) returned %p\n", statement_list, new_program_node);
+
+                    if (new_program_node) {
+                        printf("Parser Action: new_program_node->node_type = %d (%s) - Expected: %d (%s)\n",
+                               new_program_node->node_type, node_type_to_string_parser(new_program_node->node_type),
+                               NODE_PROGRAM, node_type_to_string_parser(NODE_PROGRAM));
+                         // Assign ONLY to the global variable
+                        ast_root = new_program_node;
+                        printf("Parser Action: Assigned %p to global ast_root.\n", ast_root);
+                        // DO NOT assign to $$ for the 'program' rule
+                        // $$ = new_program_node; // <--- REMOVE/COMMENT THIS
+                    } else {
+                         printf("Parser Action: ERROR - create_program_node returned NULL!\n");
+                         ast_root = NULL;
+                         YYERROR;
+                    }
+                    // Note: $1 (statements) WILL still be subject to its destructor if needed
+                    // because 'statements' itself has %type <node_ptr>
+                 }
     ;
 
-statements:
-      /* empty */      { $$ = NULL; } // Base case: no statements
-    | statement statements { // Build a linked list of statements
+statements: 
+      /* empty */      { $$ = NULL; }
+    | statement statements { // $$, $1, $2 are <node_ptr>
                       AstNode* first = $1;
                       AstNode* rest = $2;
                       if (first) {
-                          first->next = rest;
+                          AstNode* current = first;
+                          while (current->next != NULL) current = current->next;
+                          current->next = rest;
                           $$ = first;
                       } else {
-                           $$ = rest; // Skip the NULL statement (e.g., ';')
+                          $$ = rest;
                       }
                    }
     ;
 
-// A block introduces a new scope
 block:
       LCURLY
           { enter_scope(NULL); } // Enter new scope before processing statements
@@ -376,9 +417,20 @@ literal:
       INTEGER { $$ = create_int_node($1); if($$) $$->lineno = @1.first_line; }
     | DOUBLE  { $$ = create_double_node($1); if($$) $$->lineno = @1.first_line;}
     | CHAR    { $$ = create_char_node($1); if($$) $$->lineno = @1.first_line;}
-    | STRING  { $$ = create_string_node($1); free($1); if($$) $$->lineno = @1.first_line;} // Free lexer string after copying
-    | BOOL    { $$ = create_bool_node($1); if($$) $$->lineno = @1.first_line;} // Need BOOL token from lexer
-    // Add TRUE/FALSE tokens later maybe
+    | BOOL    { $$ = create_bool_node($1); if($$) $$->lineno = @1.first_line;} 
+    | STRING  {
+                if (!$1) {
+                    compiler_error(@1.first_line, "Internal Error: Failed to process string literal content (likely memory allocation).");
+                    $$ = NULL;
+                    YYERROR;
+                }
+                $$ = create_string_node($1); // create_string_node strdups
+                free($1);                    // Free the string from lexer
+                if($$) $$->lineno = @1.first_line;
+                else { YYERROR; }
+            }
+    ;
+
     ;
 
 // Argument list for function calls: a linked list of expressions

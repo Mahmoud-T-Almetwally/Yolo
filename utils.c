@@ -73,3 +73,26 @@ void compiler_warning(int lineno, const char *format, ...) {
     va_end(args);
     fprintf(stderr, "\n");
 }
+
+const char* node_type_to_string_parser(NodeType type) {
+    switch(type) {
+        case NODE_PROGRAM: return "NODE_PROGRAM";
+        case NODE_FUNC_DEF: return "NODE_FUNC_DEF";
+        case NODE_VAR_DECL: return "NODE_VAR_DECL";
+        case NODE_CONST_DECL: return "NODE_CONST_DECL";
+        case NODE_ASSIGN_STMT: return "NODE_ASSIGN_STMT";
+        case NODE_IF_STMT: return "NODE_IF_STMT";
+        case NODE_PRINT_STMT: return "NODE_PRINT_STMT";
+        case NODE_RETURN_STMT: return "NODE_RETURN_STMT";
+        case NODE_BINOP_EXPR: return "NODE_BINOP_EXPR";
+        case NODE_UNOP_EXPR: return "NODE_UNOP_EXPR";
+        case NODE_FUNC_CALL: return "NODE_FUNC_CALL";
+        case NODE_IDENT_EXPR: return "NODE_IDENT_EXPR";
+        case NODE_INT_LITERAL: return "NODE_INT_LITERAL";
+        case NODE_DOUBLE_LITERAL: return "NODE_DOUBLE_LITERAL";
+        case NODE_STRING_LITERAL: return "NODE_STRING_LITERAL";
+        case NODE_CHAR_LITERAL: return "NODE_CHAR_LITERAL";
+        case NODE_BOOL_LITERAL: return "NODE_BOOL_LITERAL";
+        default: return "NODE_UNKNOWN";
+    }
+}
