@@ -1,2 +1,12 @@
 x: int = 69;
-print(x);
+y: string = "Hello World";
+z: double = 12.6;
+check: bool = false;
+print(check);
+if(check){
+    print(y);
+    print(y);
+} else {
+    print(x);
+    print(z);
+}

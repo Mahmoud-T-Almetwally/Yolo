@@ -1,11 +1,13 @@
 // main.c (Revised Again)
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "parser.tab.h"
 #include "ast.h"
 #include "symtab.h"
 #include "semantic.h"
 #include "runtime.h"
+#include "globals.h"
 #include "utils.h"
 
 // Flex reentrant functions
@@ -13,13 +15,16 @@ extern int yylex_init(void **scanner);
 extern int yylex_destroy(void *scanner);
 extern void yyset_in(FILE *in_str, void *yyscanner);
 
-// Parser/lexer globals
-extern AstNode *ast_root;
-
 int main(int argc, char *argv[]) {
     void* scanner;
     FILE *input = NULL;
     int final_status = 0; // 0 for success, 1 for failure
+
+    if (argc > 1 && strcmp(argv[1], "--debug") == 0) {
+        debug = true;
+        argc--; // Decrease argument count
+        argv++; // Shift arguments
+    } else
 
     // Initialize Flex scanner
     if (yylex_init(&scanner) != 0) {

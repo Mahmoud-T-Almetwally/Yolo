@@ -3,13 +3,13 @@
     #include "symtab.h"
     #include "ast.h"
     #include "utils.h"
+    #include "globals.h"
     #include <stdbool.h>
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
 
     extern int yylineno;
-    AstNode *ast_root = NULL;
     symrec* current_func_sym_building = NULL;
 
     void yyerror(YYLTYPE *llocp, void *scanner, const char *s);
@@ -24,7 +24,6 @@
 }
 
 %code {
-    extern SymbolTable *current_scope; 
     extern int yylineno;
 }
 
@@ -36,10 +35,14 @@
 
 %destructor {
     if ($$ != ast_root) {
-       printf("DEBUG: Destructor freeing node %p (type %d)\n", $$, $$ ? $$->node_type : -1);
-       free_ast($$);
+        if(debug) {
+            printf("DEBUG: Destructor freeing node %p (type %d)\n", $$, $$ ? $$->node_type : -1);
+        }
+        free_ast($$);
     } else {
-       printf("DEBUG: Destructor skipping free for ast_root %p\n", $$);
+        if(debug) {
+            printf("DEBUG: Destructor skipping free for ast_root %p\n", $$); 
+        } 
     }
 } <node_ptr>
 
@@ -108,36 +111,51 @@
 
 program:
       /* empty */ {
-                    printf("Parser Action: program: <empty> matched.\n");
+                    if (debug) {
+                        printf("Parser Action: program: <empty> matched.\n");
+                    }
+
                     ast_root = create_program_node(NULL);
                     init_scope_management();
-                    printf("Parser Action: <empty> created program node %p, assigned to ast_root.\n", ast_root);
-                    // DO NOT assign to $$
+
+                    if (debug) {
+                        printf("Parser Action: program: <empty> created program node %p, assigned to ast_root.\n", ast_root);
+                    }
                   }
     | statements  {
-                    printf("Parser Action: program: statements matched.\n");
-                    AstNode* statement_list = $1; // $1 still has type <node_ptr>
-                    printf("Parser Action: $1 (statements result) = %p\n", statement_list);
+                    if (debug) {
+                        printf("Parser Action: program: statements matched.\n");
+                    }
 
-                    // ... (optional debug prints for $1) ...
+                    AstNode* statement_list = $1;
 
-                    // Create the program node using the statement list
+                    if (debug) {
+                        printf("Parser Action: program: statements matched, statement_list = %p\n", statement_list);
+                    };
+
                     AstNode* new_program_node = create_program_node(statement_list);
-                    printf("Parser Action: create_program_node(%p) returned %p\n", statement_list, new_program_node);
+                    if (debug) {
+                        printf("Parser Action: program: create_program_node(%p) returned %p\n", statement_list, new_program_node);
+                    }
 
                     if (new_program_node) {
-                        printf("Parser Action: new_program_node->node_type = %d (%s) - Expected: %d (%s)\n",
-                               new_program_node->node_type, node_type_to_string_parser(new_program_node->node_type),
-                               NODE_PROGRAM, node_type_to_string_parser(NODE_PROGRAM));
+                        if (debug) {
+                            printf("Parser Action: new_program_node->node_type = %d (%s) - Expected: %d (%s)\n",
+                                new_program_node->node_type, node_type_to_string_parser(new_program_node->node_type),
+                                NODE_PROGRAM, node_type_to_string_parser(NODE_PROGRAM));
+                        }
                          // Assign ONLY to the global variable
                         ast_root = new_program_node;
-                        printf("Parser Action: Assigned %p to global ast_root.\n", ast_root);
-                        // DO NOT assign to $$ for the 'program' rule
-                        // $$ = new_program_node; // <--- REMOVE/COMMENT THIS
+                        if (debug) {
+                            printf("Parser Action: Assigned %p to global ast_root.\n", ast_root);
+                        }
+
                     } else {
-                         printf("Parser Action: ERROR - create_program_node returned NULL!\n");
-                         ast_root = NULL;
-                         YYERROR;
+                        if (debug) {
+                            printf("Parser Action: create_program_node returned NULL!\n");
+                        }
+                        ast_root = NULL;
+                        YYERROR;
                     }
                     // Note: $1 (statements) WILL still be subject to its destructor if needed
                     // because 'statements' itself has %type <node_ptr>

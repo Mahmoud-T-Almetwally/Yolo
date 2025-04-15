@@ -332,24 +332,20 @@ RuntimeValue interpret(AstNode *node, Environment *env) {
                     default: /* void or error types */ break;
                 }
             }
-            // Store the initial value in the current environment
+            
             store_value(env, sym, init_val);
-            // Declaration itself results in void
+
             result = create_void_value();
             break;
         }
         case NODE_ASSIGN_STMT: {
-            symrec *sym = node->data.assignment.lvalue->data.ident_expr.symbol; // Assuming simple IDENT lvalue
+            symrec *sym = node->data.assignment.lvalue->data.ident_expr.symbol;
             RuntimeValue rval = interpret_expression(node->data.assignment.rvalue, env);
             if (rval.is_error) return rval;
 
-            // Store the computed value. store_value handles finding the correct scope.
             store_value(env, sym, rval);
 
-            // Assignment expression typically evaluates to the assigned value, but statement context ignores it.
-            // We return void for the statement. If assignment were an expression, return rval.
             result = create_void_value();
-            // Note: We don't need to free rval's contents here, store_value copied them if needed.
             break;
         }
         case NODE_IF_STMT: {
@@ -357,19 +353,22 @@ RuntimeValue interpret(AstNode *node, Environment *env) {
             if (cond_val.is_error) return cond_val;
 
             if (cond_val.type != TYPE_BOOL) {
-                return create_error_value("If condition did not evaluate to boolean");
+                free_runtime_value_contents(&cond_val);
+                fprintf(stderr, "Runtime Error: If condition did not evaluate to boolean (got %s)\n", data_type_to_string(cond_val.type));
+                return create_error_value("If condition not boolean");
             }
 
-            if (cond_val.value.bool_val) {
-                // Execute then branch
-                result = interpret(node->data.if_stmt.then_branch, env);
+            bool condition_result = cond_val.value.bool_val;
+            free_runtime_value_contents(&cond_val);
+
+            if (condition_result) {
+                result = interpret_statements(node->data.if_stmt.then_branch, env);
             } else if (node->data.if_stmt.else_branch) {
-                // Execute else branch if it exists
-                result = interpret(node->data.if_stmt.else_branch, env);
+                result = interpret_statements(node->data.if_stmt.else_branch, env);
             } else {
-                 result = create_void_value(); // No else branch, do nothing
+                 result = create_void_value();
             }
-            // Propagate return value if found in either branch
+            
             break;
         }
         case NODE_PRINT_STMT: {
@@ -450,17 +449,29 @@ static RuntimeValue interpret_statements(AstNode *node, Environment *env) {
     RuntimeValue last_val = create_void_value(); // Result of the sequence
 
     while (current != NULL) {
-        free_runtime_value_contents(&last_val); // Free previous statement's result contents if needed
-        last_val = interpret(current, env);
+        // Free previous statement's temporary result contents if needed (e.g., strings created but not stored)
+        // This needs careful consideration depending on how values are managed.
+        // Let's assume interpret handles freeing its intermediate results for now,
+        // but keep free_runtime_value_contents(&last_val); in mind if memory leaks appear.
+        // If last_val held a string returned by an expression-statement, it needs freeing.
+
+        RuntimeValue current_result = interpret(current, env);
+
+        // Free the contents of the *previous* statement's result value BEFORE overwriting last_val
+        // This is crucial if the statement was an expression evaluating to a string.
+        free_runtime_value_contents(&last_val);
+        last_val = current_result; // Store the result of the current statement
+
 
         // If an error occurred or a return was executed, stop processing statements
         if (last_val.is_error || last_val.is_return) {
-            return last_val;
+            return last_val; // Propagate immediately
         }
-        current = current->next;
+
+        current = current->next; // Move to the next statement
     }
-    // Return the value of the last statement (usually void unless an expression-statement)
-    // Or propagate return/error if happened.
+    // Return the value of the last statement evaluated in the sequence
+    // (or void/error/return if that's what terminated the loop)
     return last_val;
 }
 
